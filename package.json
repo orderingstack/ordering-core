@@ -9,7 +9,7 @@
   ],
   "scripts": {
     "tsc": "tsc -p tsconfig.json && tsc -p tsconfig-cjs.json",
-    "test": "jest",
+    "test": "jest"
   },
   "author": "",
   "license": "ISC",
