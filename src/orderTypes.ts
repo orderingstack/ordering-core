@@ -165,6 +165,6 @@ export interface IOrderServerTool {
   createOrder(
     ctx: any,
     tokenProvider: IAuthDataProvider,
-  ): { id: string; correlationId: string };
+  ): Promise<{ id: string; correlationId: string }>;
   fetchOrder(ctx: any, id: string, tokenProvider: IAuthDataProvider): IOrder;
 }

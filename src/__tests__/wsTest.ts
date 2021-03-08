@@ -27,7 +27,7 @@ xtest('ws connect', async () => {
   };
 
   const params: listener.ConnectWebSocketsParams = {
-    ctx,
+    baseURL: process.env.BASE_URL || '',
     tenant: ctx.TENANT,
     venue: ctx.VENUE,
     authDataProvider: authDataProvider,

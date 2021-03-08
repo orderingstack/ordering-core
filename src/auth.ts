@@ -56,6 +56,7 @@ export async function authorizeWithRefreshToken(
       },
       data: `refresh_token=${refreshToken}&grant_type=refresh_token`,
     };
+    //console.log(req);
     response = await axios(req);
     _authData = response.data;
     tokenRetrieveTimeMs = new Date().getTime();
@@ -79,24 +80,51 @@ export const authDataProvider: IAuthDataProvider = async (
       new Date().getTime() - tokenRetrieveTimeMs;
     const expiryIfGreaterThan: number =
       parseInt(_authData.expires_in) * 1000 * 0.95; //miliseconds
+    // console.log(
+    //   `--- SHOULD USE EXISTING TOKEN (${secondsFromRetrievingExistingToken} ms from retrieving, expires if >${expiryIfGreaterThan})  - result ${
+    //     secondsFromRetrievingExistingToken < expiryIfGreaterThan
+    //   } `,
+    // );
+
     if (secondsFromRetrievingExistingToken < expiryIfGreaterThan) {
       //tocken is still valid
-      //console.log(`***** *** USING EXISTING TOKEN (${secondsFromRetrievingExistingToken} ms from retrieving, expires if >${expiryIfGreaterThan}) `);
+      // console.log(
+      //   `******** USING EXISTING TOKEN (${secondsFromRetrievingExistingToken} ms from retrieving, expires if >${expiryIfGreaterThan}) `,
+      // );
       //return _authData;
       return { token: _authData.access_token, UUID: _authData.UUID };
     }
   }
   console.log('******** GET AUTH TOKEN (REMOTE CALL) ********');
+  let loginSuccess = false;
   const refreshToken = refreshTokenProvider.getRefreshToken();
-  const loginSuccess = await authorizeWithRefreshToken(
-    ctx.BASE_URL,
-    ctx.TENANT,
-    ctx.BASIC_AUTH,
-    refreshToken,
-  );
+  if (refreshToken) {
+    console.log('*** AUTHORIZE WITH REFRESH TOKEN ');
+    loginSuccess = await authorizeWithRefreshToken(
+      ctx.BASE_URL,
+      ctx.TENANT,
+      ctx.BASIC_AUTH,
+      refreshToken,
+    );
+  }
+  if (!loginSuccess && ctx.anonymousAuth) {
+    console.log('**** ANONYMOUS AUTH ****');
+    loginSuccess = await authorizeWithUserPass(
+      ctx.BASE_URL,
+      ctx.TENANT,
+      ctx.BASIC_AUTH,
+      'anonymous',
+      '',
+    );
+  }
   if (!loginSuccess) {
     return { token: '', UUID: '' };
   } else {
     return { token: _authData.access_token, UUID: _authData.UUID };
   }
 };
+
+export function setAuthData(newAuthData: any, newTokenRetrieveTimeMs: number) {
+  _authData = newAuthData;
+  tokenRetrieveTimeMs = newTokenRetrieveTimeMs;
+}

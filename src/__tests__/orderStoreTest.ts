@@ -13,8 +13,8 @@ import { EOrderType, EOrderStatus, EOrderRecStatus } from '../orderTypes';
 
 const ctx = {};
 
-test('create order should add new key to orders map', () => {
-  const { id, correlationId } = cmdOrderCreate(
+test('create order should add new key to orders map', async () => {
+  const { id, correlationId } = await cmdOrderCreate(
     ctx,
     authDataProvider,
     orderServerTool,
@@ -43,8 +43,8 @@ test('invocation of onOrderUpdate (new id) should update orders map', () => {
   expect(rec.recStatus).toBe(EOrderRecStatus.VALID);
 });
 
-test('create order, then notification with error -> proper state', () => {
-  const { id, correlationId } = cmdOrderCreate(
+test('create order, then notification with error -> proper state', async () => {
+  const { id, correlationId } = await cmdOrderCreate(
     ctx,
     authDataProvider,
     orderServerTool,
@@ -61,9 +61,9 @@ test('create order, then notification with error -> proper state', () => {
   expect(rec.recStatus).toBe(EOrderRecStatus.INVALID);
 });
 
-test('create order, update and update with close=true, should add and finaly remove item in the orders map', () => {
+test('create order, update and update with close=true, should add and finaly remove item in the orders map', async () => {
   clearOrderStore();
-  const { id } = cmdOrderCreate(ctx, authDataProvider, orderServerTool);
+  const { id } = await cmdOrderCreate(ctx, authDataProvider, orderServerTool);
   expect(id).toBe('order3');
   const orderStore: OrderRecHashmap = getOrderStore();
   const rec = orderStore['order3'];

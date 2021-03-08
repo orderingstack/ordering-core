@@ -2,7 +2,6 @@ import { IAuthDataProvider, IRefreshTokenHandler } from './orderTypes';
 
 import * as StompJs from '@stomp/stompjs';
 import { replaceProtocolInUrl } from './tools';
-
 if (typeof TextEncoder !== 'function') {
   const TextEncodingPolyfill = require('text-encoding');
   global.TextEncoder = TextEncodingPolyfill.TextEncoder;
@@ -10,7 +9,7 @@ if (typeof TextEncoder !== 'function') {
 }
 
 export interface ConnectWebSocketsParams {
-  ctx: any;
+  baseURL: string;
   tenant: string;
   venue: string;
   authDataProvider: IAuthDataProvider;
@@ -35,22 +34,20 @@ export interface ConnectWebSocketsParams {
  */
 export async function connectWebSockets(params: ConnectWebSocketsParams) {
   let client: StompJs.Client;
-  const baseURL =
-    replaceProtocolInUrl(params.ctx.BASE_URL, 'wss://') + '/websocket';
+  const baseURL = replaceProtocolInUrl(params.baseURL, 'wss://') + '/websocket';
   let userUUID: string = '';
   const stompConfig: StompJs.StompConfig = {
-    //brokerURL: `${params.ctx.BASE_URL}/ws`,
     brokerURL: baseURL,
-    // debug: function (a: any) {
-    //   console.log(a);
-    // },
+    debug: function (a: any) {
+      //   console.log(a);
+    },
     reconnectDelay: 20000,
     heartbeatIncoming: 4000,
     heartbeatOutgoing: 4000,
 
     beforeConnect: async function () {
       const { token, UUID } = await params.authDataProvider(
-        params.ctx,
+        params.baseURL,
         params.refreshTokenHandler,
         false,
       );
@@ -60,7 +57,6 @@ export async function connectWebSockets(params: ConnectWebSocketsParams) {
         if (params.onAuthFailure) params.onAuthFailure();
       }
       stompConfig.connectHeaders = { login: token /*passcode: ''*/ };
-      //stompConfig.connectHeaders.login = token;
       userUUID = UUID;
     },
 
@@ -69,13 +65,15 @@ export async function connectWebSockets(params: ConnectWebSocketsParams) {
       const accessToken = stompConfig.connectHeaders.login;
       await params.onConnectedAsync(accessToken);
       console.log('Websocket connected.');
-      var subscription = client.subscribe(
-        `/kds/${params.tenant}/${params.venue}`,
-        async function (data: any) {
-          var message = JSON.parse(data.body);
-          await params.onKDSMessageAsync(message);
-        },
-      );
+      if (params.onKDSMessageAsync) {
+        var subscription = client.subscribe(
+          `/kds/${params.tenant}/${params.venue}`,
+          async function (data: any) {
+            var message = JSON.parse(data.body);
+            await params.onKDSMessageAsync(message);
+          },
+        );
+      }
       if (params.onOrdersUpdateAsync) {
         var subscriptionForOrdersUpdate = client.subscribe(
           `/order-changes/${params.tenant}/${userUUID}`,
@@ -109,7 +107,7 @@ export async function connectWebSockets(params: ConnectWebSocketsParams) {
       console.error('Broker reported error: ' + frame.headers['message']);
       console.error('Additional details: ' + frame.body);
       const { token, UUID } = await params.authDataProvider(
-        params.ctx,
+        params.baseURL,
         params.refreshTokenHandler,
         false,
       );
@@ -133,7 +131,7 @@ export async function connectWebSockets(params: ConnectWebSocketsParams) {
   };
   try {
     const { token, UUID } = await params.authDataProvider(
-      params.ctx,
+      params.baseURL,
       params.refreshTokenHandler,
       false,
     );
@@ -159,7 +157,3 @@ export async function connectWebSockets(params: ConnectWebSocketsParams) {
     console.error(err);
   }
 }
-
-module.exports = {
-  connectWebSockets,
-};

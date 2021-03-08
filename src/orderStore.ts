@@ -13,6 +13,10 @@ export interface OrderRecHashmap {
 let orderRecords: OrderRecHashmap = {}; //TODO prune old orders
 let orderUpdateCallback: Function;
 
+export const setOrderStoreUpdatedCallback = (_callback: Function) => {
+  orderUpdateCallback = _callback;
+};
+
 export const cmdOrderCreate = async (
   ctx: any,
   authDataProvider: IAuthDataProvider,
@@ -31,7 +35,7 @@ export const cmdOrderCreate = async (
       recStatus: EOrderRecStatus.INITIALIZING,
     };
   }
-  if (orderUpdateCallback) orderUpdateCallback();
+  if (orderUpdateCallback) orderUpdateCallback(orderRecords[id], orderRecords);
   return { id, correlationId };
 };
 
@@ -65,7 +69,7 @@ export const onOrderUpdate = (orderData: any) => {
   // console.log(
   //   `Order Store contains ${Object.keys(orderRecords).length} records`,
   // );
-  if (orderUpdateCallback) orderUpdateCallback();
+  if (orderUpdateCallback) orderUpdateCallback(orderRecords[id], orderRecords);
 };
 
 export const onOrderError = (errorMsg: any) => {
@@ -77,7 +81,8 @@ export const onOrderError = (errorMsg: any) => {
       recStatus: EOrderRecStatus.INVALID,
       createOrderCorrelationId: '',
     };
-    if (orderUpdateCallback) orderUpdateCallback();
+    if (orderUpdateCallback)
+      orderUpdateCallback(orderRecords[id], orderRecords);
   } else {
     const rec = orderRecords[id];
     if (rec.createOrderCorrelationId === errorMsg.correlationId) {
@@ -98,14 +103,16 @@ export const clearOrderStore = (): void => {
 };
 
 function toOrder(orderData: any): IOrder {
-  const order: IOrder = {
-    id: orderData.id,
-    tenant: orderData.tenant,
-    orderType: orderData.orderType,
-    created: orderData.created,
-    status: orderData.status,
-    buckets: [],
-    closed: orderData.closed,
-  };
+  const order: IOrder = orderData;
+  // const order: IOrder = {
+  //   id: orderData.id,
+  //   tenant: orderData.tenant,
+  //   orderType: orderData.orderType,
+  //   created: orderData.created,
+  //   status: orderData.status,
+  //   buckets: orderData.buckets,
+  //   closed: orderData.closed,
+  //   users:orderData.users,
+  // };
   return order;
 }

@@ -1,8 +1,6 @@
 import { rest } from 'msw';
 import querystring from 'querystring';
-require('dotenv').config();
-const authUrl = `${process.env.BASE_URL}/auth-oauth2/oauth/token`;
-//console.log(`mock handler for ${authUrl}`);
+const authUrl = `http://localhost/auth-oauth2/oauth/token`;
 
 const goodAuthResponseBody = {
   access_token: 'proper_access_token',
@@ -17,7 +15,10 @@ export const handlers = [
     const grantType = params['grant_type'];
     if (grantType === 'password') {
       const username = params['username'];
-      if (username === 'testomir6@3e.pl') {
+      if (username === 'test@test.pl') {
+        return resp(ctx.status(200), ctx.json(goodAuthResponseBody));
+      }
+      if (username === 'anonymous') {
         return resp(ctx.status(200), ctx.json(goodAuthResponseBody));
       }
     }

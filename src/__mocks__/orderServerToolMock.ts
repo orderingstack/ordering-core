@@ -10,7 +10,10 @@ import {
 let lastOrderId = 1;
 
 export const orderServerTool: IOrderServerTool = {
-  createOrder: (ctx: any, tokenProvider: IAuthDataProvider) => {
+  createOrder: async (
+    ctx: any,
+    tokenProvider: IAuthDataProvider,
+  ): Promise<{ id: string; correlationId: string }> => {
     const retVal = {
       id: `order${lastOrderId}`,
       correlationId: `corelation${lastOrderId}`,

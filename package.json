@@ -1,9 +1,10 @@
 {
   "name": "@orderingstack/ordering-core",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Ordering Stack client core library",
   "main": "./lib/cjs/index.js",
   "module": "./lib/esm/index.js",
+  "types": "./lib/esm/index.d.ts",
   "files": [
     "lib/"
   ],
@@ -11,8 +12,8 @@
     "tsc": "tsc -p tsconfig.json && tsc -p tsconfig-cjs.json",
     "test": "jest"
   },
-  "author": "",
-  "license": "ISC",
+  "author": "kolec",
+  "license": "MIT",
   "dependencies": {
     "@stomp/stompjs": "6.0.0",
     "axios": "^0.21.1",
@@ -22,7 +23,6 @@
   "devDependencies": {
     "@types/jest": "^26.0.20",
     "@types/node": "^12.20.4",
-    "dotenv": "^8.2.0",
     "jest": "^26.6.3",
     "mock-socket": "^9.0.3",
     "msw": "^0.26.2",

@@ -5,10 +5,15 @@
     "strict": true,
     "moduleResolution": "node", 
     "esModuleInterop": true,
+    "declaration": true,
     "forceConsistentCasingInFileNames": true,
     "outDir": "./lib/esm",
   },
   "include": [
     "./src"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist"
   ]
 }
