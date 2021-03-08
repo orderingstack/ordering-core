@@ -74,17 +74,22 @@ export const authDataProvider: IAuthDataProvider = async (
   forceRefresh = false,
 ): Promise<{ token: string; UUID: string }> => {
   //TODO: add local state and keep vaild token, minimise calls to auth api
+  console.log(
+    `authDataProvider invoked ----     currentToken=${
+      _authData ? _authData.access_token : '(null)'
+    }`,
+  );
   if (!forceRefresh && _authData && _authData.access_token) {
     // check if we can use current token
     const secondsFromRetrievingExistingToken =
       new Date().getTime() - tokenRetrieveTimeMs;
     const expiryIfGreaterThan: number =
       parseInt(_authData.expires_in) * 1000 * 0.95; //miliseconds
-    // console.log(
-    //   `--- SHOULD USE EXISTING TOKEN (${secondsFromRetrievingExistingToken} ms from retrieving, expires if >${expiryIfGreaterThan})  - result ${
-    //     secondsFromRetrievingExistingToken < expiryIfGreaterThan
-    //   } `,
-    // );
+    console.log(
+      `--- SHOULD USE EXISTING TOKEN (${secondsFromRetrievingExistingToken} ms from retrieving, expires if >${expiryIfGreaterThan})  - result ${
+        secondsFromRetrievingExistingToken < expiryIfGreaterThan
+      } `,
+    );
 
     if (secondsFromRetrievingExistingToken < expiryIfGreaterThan) {
       //tocken is still valid
@@ -120,6 +125,7 @@ export const authDataProvider: IAuthDataProvider = async (
   if (!loginSuccess) {
     return { token: '', UUID: '' };
   } else {
+    refreshTokenProvider.setRefreshToken(_authData.refresh_token);
     return { token: _authData.access_token, UUID: _authData.UUID };
   }
 };
