@@ -12,27 +12,22 @@ export async function pullOrders(
   token: string,
 ) {
   console.log('Pulling orders...');
-  let response = null;
-  try {
-    response = await axios({
-      method: 'get',
-      url: `${baseURL}/ordering-api/api/orders/venue/${venue}`,
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-    });
-    const orders = [];
-    for (const o of response.data) {
-      if (o.completed) {
-        orders.push(o);
-      }
+  const response = await axios({
+    method: 'get',
+    url: `${baseURL}/ordering-api/api/orders/venue/${venue}`,
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+  }).catch(handleAPIError);
+  if (!response) return [];
+  const orders = [];
+  for (const o of response.data) {
+    if (o.completed) {
+      orders.push(o);
     }
-    return orders;
-  } catch (error) {
-    console.error(error);
-    return [];
   }
+  return orders;
 }
 
 /**
@@ -41,27 +36,22 @@ Pulls open orders for the user. Uses provided access token to authenticate to re
  */
 export async function pullOrdersForUser(baseURL: string, token: string) {
   console.log('Pulling orders for user...');
-  let response = null;
-  try {
-    response = await axios({
-      method: 'get',
-      url: `${baseURL}/ordering-api/api/orders/opened`,
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-    });
-    const orders = [];
-    for (const o of response.data) {
-      if (o.completed) {
-        orders.push(o);
-      }
+  const response = await axios({
+    method: 'get',
+    url: `${baseURL}/ordering-api/api/orders/opened`,
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+  }).catch(handleAPIError);
+  if (!response) return [];
+  const orders = [];
+  for (const o of response.data) {
+    if (o.completed) {
+      orders.push(o);
     }
-    return orders;
-  } catch (error) {
-    console.error(error);
-    return [];
   }
+  return orders;
 }
 
 export async function updateCentrallyOrderExtraAttr(
@@ -71,23 +61,18 @@ export async function updateCentrallyOrderExtraAttr(
   store: string,
 ) {
   let result;
-  try {
-    result = await axios({
-      method: 'POST',
-      url: `${baseURL}/ordering-api/api/order/${orderId}/extra`,
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      data: {
-        store,
-      },
-    });
-    return true;
-  } catch (err) {
-    console.log(err);
-    return false;
-  }
+  result = await axios({
+    method: 'POST',
+    url: `${baseURL}/ordering-api/api/order/${orderId}/extra`,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    data: {
+      store,
+    },
+  }).catch(handleAPIError);
+  return result ? true : false;
 }
 
 export async function postNewOrder(
@@ -103,6 +88,52 @@ export async function postNewOrder(
       Authorization: `Bearer ${token}`,
     },
     data: order,
-  });
-  return response.data;
+  }).catch(handleAPIError);
+  return response ? response.data : null;
+}
+
+export async function createOrderPayment(
+  baseURL: string,
+  token: string,
+  orderId: string,
+  paymentType: number,
+  amount: number,
+  returnUrl: string,
+  returnErrorUrl: string,
+  source: string,
+) {
+  const data = {
+    orderId,
+    paymentType,
+    amount,
+    returnUrl,
+    returnErrorUrl,
+    source,
+  };
+  const response = await axios({
+    method: 'post',
+    url: `${baseURL}/payment-api/create`,
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    data,
+  }).catch(handleAPIError);
+  return response ? response.data : null;
+}
+
+function handleAPIError(error: any) {
+  const { status } = error.response;
+  switch (status) {
+    case 400:
+      console.log('Error: invalid request');
+      break;
+    case 401:
+      console.log('Error: not authenticated');
+      break;
+    case 500:
+      console.log('Error: server problems');
+      break;
+  }
+  throw error;
 }

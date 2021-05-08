@@ -39,20 +39,21 @@ export async function connectWebSockets(params: ConnectWebSocketsParams) {
   const stompConfig: StompJs.StompConfig = {
     brokerURL: baseURL,
     debug: function (a: any) {
-      //   console.log(a);
+      //console.log('DEBUG: ' + a);
     },
     reconnectDelay: 20000,
     heartbeatIncoming: 4000,
     heartbeatOutgoing: 4000,
 
     beforeConnect: async function () {
+      //console.log('--- beforeConnect --- ');
       const { token, UUID } = await params.authDataProvider(
-        params.baseURL,
+        baseURL,
         params.refreshTokenHandler,
         false,
       );
       if (!token) {
-        console.error('Access token provider error - deactivating socket');
+        //console.error('Access token provider error - deactivating socket');
         client.deactivate();
         if (params.onAuthFailure) params.onAuthFailure();
       }
@@ -64,7 +65,7 @@ export async function connectWebSockets(params: ConnectWebSocketsParams) {
       if (!stompConfig.connectHeaders) return;
       const accessToken = stompConfig.connectHeaders.login;
       await params.onConnectedAsync(accessToken);
-      console.log('Websocket connected.');
+      //console.log('Websocket connected.');
       if (params.onKDSMessageAsync) {
         var subscription = client.subscribe(
           `/kds/${params.tenant}/${params.venue}`,
@@ -96,7 +97,7 @@ export async function connectWebSockets(params: ConnectWebSocketsParams) {
 
     onDisconnect: async function () {
       await params.onDisconnectAsync();
-      console.log('Websocket disconnected.');
+      //console.log('Websocket disconnected.');
     },
 
     onStompError: async function (frame: any) {
@@ -104,56 +105,49 @@ export async function connectWebSockets(params: ConnectWebSocketsParams) {
       // Bad login/passcode typically will cause an error
       // Complaint brokers will set `message` header with a brief message. Body may contain details.
       // Compliant brokers will terminate the connection after any error
-      console.error('Broker reported error: ' + frame.headers['message']);
-      console.error('Additional details: ' + frame.body);
-      const { token, UUID } = await params.authDataProvider(
-        params.baseURL,
-        params.refreshTokenHandler,
-        false,
-      );
-      if (!token) {
-        console.error('Access token provider error - deactivating socket');
-        client.deactivate();
-        if (params.onAuthFailure) params.onAuthFailure();
-      }
-      stompConfig.connectHeaders = { login: token /*passcode: ''*/ };
-      userUUID = UUID;
+      //console.error('Broker reported error: ' + frame.headers['message']);
+      //console.error('Additional details: ' + frame.body);
+      await client.deactivate();
+
+      client = createNewClient(stompConfig);
+      client.activate();
     },
     onWebSocketClose: function () {
-      console.log('Websocket closed.');
+      //console.log('Websocket closed.');
     },
     onWebSocketError: function () {
-      console.log('Websocket error.');
+      //console.log('Websocket error.');
     },
     onUnhandledMessage: function () {},
     logRawCommunication: true,
     discardWebsocketOnCommFailure: true,
   };
+
   try {
     const { token, UUID } = await params.authDataProvider(
       params.baseURL,
       params.refreshTokenHandler,
       false,
     );
-    // if (!accessToken) {
-    //     //console.error('Access token provider error - deactivating socket')
-    //     //client.deactivate();
-    // }
     stompConfig.connectHeaders = { login: token /*passcode: ''*/ };
-    console.log(JSON.stringify(stompConfig));
-    client = new StompJs.Client(stompConfig);
-    if (typeof WebSocket !== 'function') {
-      // Fallback code
-      client.webSocketFactory = () => {
-        const WebSocket = require('ws');
-        global.WebSocket = WebSocket;
-        console.log('create ws with ' + baseURL);
-        const ws = new WebSocket(baseURL);
-        return ws;
-      };
-    }
+    client = createNewClient(stompConfig);
     client.activate();
   } catch (err) {
     console.error(err);
   }
+}
+
+function createNewClient(stompConfig: any) {
+  const _client = new StompJs.Client(stompConfig);
+  if (typeof WebSocket !== 'function') {
+    // Fallback code
+    _client.webSocketFactory = () => {
+      const WebSocket = require('ws');
+      global.WebSocket = WebSocket;
+      //console.log('create ws with ' + stompConfig.brokerURL);
+      const ws = new WebSocket(stompConfig.brokerURL);
+      return ws;
+    };
+  }
+  return _client;
 }

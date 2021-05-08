@@ -60,6 +60,8 @@ export async function authorizeWithRefreshToken(
     response = await axios(req);
     _authData = response.data;
     tokenRetrieveTimeMs = new Date().getTime();
+    console.log('REFRESH TOKEN AUTH RESULT ***');
+    console.log(_authData);
     return true;
   } catch (error) {
     //console.error('Authorization error');
@@ -73,38 +75,25 @@ export const authDataProvider: IAuthDataProvider = async (
   refreshTokenProvider,
   forceRefresh = false,
 ): Promise<{ token: string; UUID: string }> => {
-  //TODO: add local state and keep vaild token, minimise calls to auth api
-  console.log(
-    `authDataProvider invoked ----     currentToken=${
-      _authData ? _authData.access_token : '(null)'
-    }`,
-  );
+  // console.log( `authDataProvider invoked ----     currentToken=${  _authData ? _authData.access_token : '(null)'   }`, );
   if (!forceRefresh && _authData && _authData.access_token) {
     // check if we can use current token
     const secondsFromRetrievingExistingToken =
       new Date().getTime() - tokenRetrieveTimeMs;
     const expiryIfGreaterThan: number =
       parseInt(_authData.expires_in) * 1000 * 0.95; //miliseconds
-    console.log(
-      `--- SHOULD USE EXISTING TOKEN (${secondsFromRetrievingExistingToken} ms from retrieving, expires if >${expiryIfGreaterThan})  - result ${
-        secondsFromRetrievingExistingToken < expiryIfGreaterThan
-      } `,
-    );
-
+    // console.log(
+    //   `--- SHOULD USE EXISTING TOKEN (${secondsFromRetrievingExistingToken} ms from retrieving, expires if >${expiryIfGreaterThan})  - result ${
+    //     secondsFromRetrievingExistingToken < expiryIfGreaterThan } `,);
     if (secondsFromRetrievingExistingToken < expiryIfGreaterThan) {
-      //tocken is still valid
-      // console.log(
-      //   `******** USING EXISTING TOKEN (${secondsFromRetrievingExistingToken} ms from retrieving, expires if >${expiryIfGreaterThan}) `,
-      // );
-      //return _authData;
       return { token: _authData.access_token, UUID: _authData.UUID };
     }
   }
-  console.log('******** GET AUTH TOKEN (REMOTE CALL) ********');
+  //console.log('******** GET AUTH TOKEN (REMOTE CALL) ********');
   let loginSuccess = false;
   const refreshToken = refreshTokenProvider.getRefreshToken();
   if (refreshToken) {
-    console.log('*** AUTHORIZE WITH REFRESH TOKEN ');
+    //console.log('*** AUTHORIZE WITH REFRESH TOKEN ');
     loginSuccess = await authorizeWithRefreshToken(
       ctx.BASE_URL,
       ctx.TENANT,
@@ -113,7 +102,7 @@ export const authDataProvider: IAuthDataProvider = async (
     );
   }
   if (!loginSuccess && ctx.anonymousAuth) {
-    console.log('**** ANONYMOUS AUTH ****');
+    //console.log('**** ANONYMOUS AUTH ****');
     loginSuccess = await authorizeWithUserPass(
       ctx.BASE_URL,
       ctx.TENANT,
@@ -129,6 +118,14 @@ export const authDataProvider: IAuthDataProvider = async (
     return { token: _authData.access_token, UUID: _authData.UUID };
   }
 };
+
+export function createAuthDataProvider(
+  ctx: any,
+  refreshTokenProvider: any,
+  forceRefresh = false,
+): IAuthDataProvider {
+  return () => authDataProvider(ctx, refreshTokenProvider, forceRefresh);
+}
 
 export function setAuthData(newAuthData: any, newTokenRetrieveTimeMs: number) {
   _authData = newAuthData;

@@ -20,6 +20,7 @@ export {
   pullOrders,
   pullOrdersForUser,
   updateCentrallyOrderExtraAttr,
+  createOrderPayment,
 } from './orderService';
 export {
   clearOrderStore,
@@ -32,6 +33,7 @@ export {
 export * as orderStore from './orderStore';
 export {
   authDataProvider,
+  createAuthDataProvider,
   authorizeWithRefreshToken,
   authorizeWithUserPass,
 } from './auth';

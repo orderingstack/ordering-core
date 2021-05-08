@@ -10,6 +10,7 @@ export function orderChangesListener(
   authDataProvider: IAuthDataProvider,
   refreshTokenHandler: IRefreshTokenHandler,
   onOrderUpdatedCallback: Function,
+  _onAuthFailureCallback: Function,
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     orderStore.setOrderStoreUpdatedCallback(onOrderUpdatedCallback);
@@ -20,7 +21,7 @@ export function orderChangesListener(
       authDataProvider: authDataProvider,
       refreshTokenHandler,
       onConnectedAsync: async (accessToken: any): Promise<any> => {
-        console.log('ws connected!');
+        //console.log('ws connected!');
         const orders = await orderService.pullOrdersForUser(
           BASE_URL,
           //VENUE,
@@ -32,7 +33,7 @@ export function orderChangesListener(
         resolve();
       },
       onDisconnectAsync: async (): Promise<void> => {
-        console.log('ws disconnected');
+        //console.log('ws disconnected');
       },
       onKDSMessageAsync: null,
       // onKDSMessageAsync: async (message: any): Promise<void> => {
@@ -49,6 +50,7 @@ export function orderChangesListener(
       },
       onAuthFailure: async () => {
         console.log('------------- MANUAL AUTH REQUIRED ----------------- ');
+        if (_onAuthFailureCallback) await _onAuthFailureCallback();
       },
     };
     listener.connectWebSockets(params);
