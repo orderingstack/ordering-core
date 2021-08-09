@@ -19,6 +19,10 @@ export enum EOrderStatus {
   COMPLETED,
   DELIVER,
 }
+export enum EOrderLineStatus {
+  NEW,
+  CONFIRMED,
+}
 
 export enum EOrderPaymentType {
   CASH,
@@ -145,17 +149,32 @@ export interface IOrderRec {
   recStatus: EOrderRecStatus;
 }
 
-export interface IRefreshTokenHandler {
-  getRefreshToken(): string;
-  setRefreshToken(refreshToken: string): void;
+export interface IRefreshTokenStorageHandler {
+  getRefreshToken(tenant: string): string;
+  setRefreshToken(tenant: string, refreshToken: string): void;
+  clearRefreshToken(tenant: string): void;
+}
+
+export interface IAuthData {
+  expires_in: string;
+  access_token: string;
+  UUID: string;
+  refresh_token: string;
 }
 
 export interface IAuthDataProvider {
   (
     ctx: any,
-    getRefreshToken: IRefreshTokenHandler,
+    getRefreshToken: IRefreshTokenStorageHandler,
     forceRefresh?: boolean,
   ): Promise<{
+    token: string;
+    UUID: string;
+  }>;
+}
+
+export interface IConfiguredAuthDataProvider {
+  ():  Promise<{
     token: string;
     UUID: string;
   }>;

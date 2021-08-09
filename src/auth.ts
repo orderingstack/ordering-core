@@ -1,12 +1,8 @@
 import axios from 'axios';
-import { IAuthDataProvider } from './orderTypes';
+import { IAuthData, IAuthDataProvider, IConfiguredAuthDataProvider, IRefreshTokenStorageHandler } from './orderTypes';
+import {handleAPIError} from './apiTools'
 
-let _authData: {
-  expires_in: string;
-  access_token: string;
-  UUID: string;
-  refresh_token: string;
-};
+let _authData: IAuthData;
 let tokenRetrieveTimeMs: number = -1;
 
 export async function authorizeWithUserPass(
@@ -64,7 +60,7 @@ export async function authorizeWithRefreshToken(
     console.log(_authData);
     return true;
   } catch (error) {
-    //console.error('Authorization error');
+    console.error('Authorization error');
     //console.error(error)
     return false;
   }
@@ -72,7 +68,7 @@ export async function authorizeWithRefreshToken(
 
 export const authDataProvider: IAuthDataProvider = async (
   ctx: any,
-  refreshTokenProvider,
+  refreshTokenStorageHandler,
   forceRefresh = false,
 ): Promise<{ token: string; UUID: string }> => {
   // console.log( `authDataProvider invoked ----     currentToken=${  _authData ? _authData.access_token : '(null)'   }`, );
@@ -91,7 +87,7 @@ export const authDataProvider: IAuthDataProvider = async (
   }
   //console.log('******** GET AUTH TOKEN (REMOTE CALL) ********');
   let loginSuccess = false;
-  const refreshToken = refreshTokenProvider.getRefreshToken();
+  const refreshToken = refreshTokenStorageHandler.getRefreshToken(ctx.TENANT);
   if (refreshToken) {
     //console.log('*** AUTHORIZE WITH REFRESH TOKEN ');
     loginSuccess = await authorizeWithRefreshToken(
@@ -114,7 +110,7 @@ export const authDataProvider: IAuthDataProvider = async (
   if (!loginSuccess) {
     return { token: '', UUID: '' };
   } else {
-    refreshTokenProvider.setRefreshToken(_authData.refresh_token);
+    refreshTokenStorageHandler.setRefreshToken(ctx.TENANT, _authData.refresh_token);
     return { token: _authData.access_token, UUID: _authData.UUID };
   }
 };
@@ -123,11 +119,29 @@ export function createAuthDataProvider(
   ctx: any,
   refreshTokenProvider: any,
   forceRefresh = false,
-): IAuthDataProvider {
+): IConfiguredAuthDataProvider {
   return () => authDataProvider(ctx, refreshTokenProvider, forceRefresh);
 }
 
-export function setAuthData(newAuthData: any, newTokenRetrieveTimeMs: number) {
+export function setAuthData(tenant: string, newAuthData: IAuthData, refreshTokenStorageHandler:IRefreshTokenStorageHandler, newTokenRetrieveTimeMs: number = new Date().getTime()) {
   _authData = newAuthData;
   tokenRetrieveTimeMs = newTokenRetrieveTimeMs;
+  //TODO: dodac klucz dla storage zawierający TENANT
+  refreshTokenStorageHandler.setRefreshToken(tenant, _authData.refresh_token);
+}
+
+export function clearAuthData(tenant: string, refreshTokenStorageHandler:IRefreshTokenStorageHandler) {
+    refreshTokenStorageHandler.clearRefreshToken(tenant);
+}
+
+export async function getLoggedUserData(baseURL: string, token: string) {
+    const response = await axios({
+      method: 'get',
+      url: `${baseURL}/auth-api/api/me`,
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },      
+    }).catch(handleAPIError);
+    return response ? response.data : null;
 }

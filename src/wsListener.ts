@@ -1,4 +1,4 @@
-import { IAuthDataProvider, IRefreshTokenHandler } from './orderTypes';
+import { IAuthDataProvider, IConfiguredAuthDataProvider, IRefreshTokenStorageHandler } from './orderTypes';
 
 import * as StompJs from '@stomp/stompjs';
 import { replaceProtocolInUrl } from './tools';
@@ -12,14 +12,15 @@ export interface ConnectWebSocketsParams {
   baseURL: string;
   tenant: string;
   venue: string;
-  authDataProvider: IAuthDataProvider;
-  refreshTokenHandler: IRefreshTokenHandler;
+  authDataProvider: IConfiguredAuthDataProvider;
+  //refreshTokenHandler: IRefreshTokenStorageHandler;
   onConnectedAsync: any;
   onDisconnectAsync: any;
   onKDSMessageAsync: any;
   onOrdersUpdateAsync: any;
   onNotificationAsync: any;
   onAuthFailure: any;
+  enableKDS: boolean;
 }
 
 /**
@@ -48,9 +49,9 @@ export async function connectWebSockets(params: ConnectWebSocketsParams) {
     beforeConnect: async function () {
       //console.log('--- beforeConnect --- ');
       const { token, UUID } = await params.authDataProvider(
-        baseURL,
-        params.refreshTokenHandler,
-        false,
+        // baseURL,
+        // params.refreshTokenHandler,
+        // false,
       );
       if (!token) {
         //console.error('Access token provider error - deactivating socket');
@@ -65,7 +66,7 @@ export async function connectWebSockets(params: ConnectWebSocketsParams) {
       if (!stompConfig.connectHeaders) return;
       const accessToken = stompConfig.connectHeaders.login;
       await params.onConnectedAsync(accessToken);
-      //console.log('Websocket connected.');
+      console.log('Websocket connected.');
       if (params.onKDSMessageAsync) {
         var subscription = client.subscribe(
           `/kds/${params.tenant}/${params.venue}`,
@@ -97,7 +98,7 @@ export async function connectWebSockets(params: ConnectWebSocketsParams) {
 
     onDisconnect: async function () {
       await params.onDisconnectAsync();
-      //console.log('Websocket disconnected.');
+      console.log('Websocket disconnected.');
     },
 
     onStompError: async function (frame: any) {
@@ -125,9 +126,9 @@ export async function connectWebSockets(params: ConnectWebSocketsParams) {
 
   try {
     const { token, UUID } = await params.authDataProvider(
-      params.baseURL,
-      params.refreshTokenHandler,
-      false,
+      // params.baseURL,
+      // params.refreshTokenHandler,
+      // false,
     );
     stompConfig.connectHeaders = { login: token /*passcode: ''*/ };
     client = createNewClient(stompConfig);

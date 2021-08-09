@@ -1,8 +1,8 @@
-import { IAuthDataProvider, IRefreshTokenHandler } from '../orderTypes';
+import { IAuthDataProvider, IRefreshTokenStorageHandler } from '../orderTypes';
 
 export const authDataProvider: IAuthDataProvider = async (
   ctx: any,
-  refreshTokenHandler: IRefreshTokenHandler,
+  refreshTokenHandler: IRefreshTokenStorageHandler,
   forceRefresh?: boolean,
 ) => {
   return {

@@ -1,4 +1,4 @@
-import { IAuthDataProvider, IRefreshTokenHandler } from './../orderTypes';
+import { IAuthDataProvider, IConfiguredAuthDataProvider, IRefreshTokenStorageHandler } from './../orderTypes';
 import * as listener from './../wsListener';
 import { Server } from 'mock-socket';
 
@@ -13,11 +13,12 @@ xtest('ws connect', async () => {
     });
   });
 
-  const refreshTokenHandler: IRefreshTokenHandler = {
-    getRefreshToken: () => {
+  const refreshTokenHandler: IRefreshTokenStorageHandler = {
+    getRefreshToken: (tenant: string) => {
       return 'refresh_token';
     },
-    setRefreshToken: (r) => {},
+    setRefreshToken: (tenant: string, r) => {},
+    clearRefreshToken: (tenant: string) => {},
   };
 
   const ctx: any = {
@@ -31,7 +32,7 @@ xtest('ws connect', async () => {
     tenant: ctx.TENANT,
     venue: ctx.VENUE,
     authDataProvider: authDataProvider,
-    refreshTokenHandler,
+    //refreshTokenHandler,
     onConnectedAsync: async (accessToken: any): Promise<any> => {
       console.log('ws connected!');
     },
@@ -48,14 +49,15 @@ xtest('ws connect', async () => {
       console.log(`NOTIFICATION: ${JSON.stringify(message)}`);
     },
     onAuthFailure: async () => {},
+    enableKDS: true,
   };
   await listener.connectWebSockets(params);
 });
 
-const authDataProvider: IAuthDataProvider = async (
-  ctx: any,
-  refreshTokenProvider,
-  forceRefresh?: boolean,
+const authDataProvider: IConfiguredAuthDataProvider = async (
+  // ctx: any,
+  // refreshTokenProvider,
+  // forceRefresh?: boolean,
 ) => {
   return { token: 'aaa', UUID: 'user1' };
 };

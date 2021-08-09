@@ -10,10 +10,12 @@ export {
   IOrderRec,
   IOrderServerTool,
   IProductLiterals,
+  IAuthData, 
   IAuthDataProvider,
   IExtra,
-  IRefreshTokenHandler,
+  IRefreshTokenStorageHandler,
   IUser,
+  IConfiguredAuthDataProvider
 } from './orderTypes';
 export {
   postNewOrder,
@@ -21,6 +23,8 @@ export {
   pullOrdersForUser,
   updateCentrallyOrderExtraAttr,
   createOrderPayment,
+  addOrderContactData,
+  appendOrderLine,
 } from './orderService';
 export {
   clearOrderStore,
@@ -36,6 +40,9 @@ export {
   createAuthDataProvider,
   authorizeWithRefreshToken,
   authorizeWithUserPass,
+  setAuthData,
+  clearAuthData,
+  getLoggedUserData
 } from './auth';
 export { ConnectWebSocketsParams, connectWebSockets } from './wsListener';
 export { orderChangesListener } from './mainService';

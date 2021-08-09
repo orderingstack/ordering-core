@@ -1,5 +1,6 @@
 import axios from 'axios';
-import { IOrder } from './orderTypes';
+import { EOrderLineStatus, IOrder } from './orderTypes';
+import {handleAPIError} from './apiTools'
 
 /**
 Pulls open orders for venue. Uses provided access token to authenticate to rest api.   
@@ -122,18 +123,69 @@ export async function createOrderPayment(
   return response ? response.data : null;
 }
 
-function handleAPIError(error: any) {
-  const { status } = error.response;
-  switch (status) {
-    case 400:
-      console.log('Error: invalid request');
-      break;
-    case 401:
-      console.log('Error: not authenticated');
-      break;
-    case 500:
-      console.log('Error: server problems');
-      break;
-  }
-  throw error;
+export async function addOrderContactData(
+  baseURL: string,
+  token: string,
+  orderId: string,
+  name?: string,
+  phone?: string,
+  email?: string,
+) {
+  const data = {
+    name,
+    phone,
+    email,
+  };
+
+  const response = await axios({
+    method: 'post',
+    url: `${baseURL}/ordering-api/api/order/${orderId}/contact`,
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    data,
+  }).catch(handleAPIError);
+  return response ? response.data : null;
 }
+
+export async function appendOrderLine(
+  baseURL: string,
+  token: string,
+  orderId: string,
+  venueId: string,
+  productId: string,
+  price: number,
+  quantity: number,
+  status: EOrderLineStatus = EOrderLineStatus.NEW,
+  productConfig?: any,
+  comment?: string,
+  extra?: any,
+) {
+  const data = {
+    venue: venueId,
+    lines: [
+      {
+        productId,
+        price,
+        quantity,
+        status,
+        productConfig,
+        comment,
+        extra,
+      },
+    ],
+  };
+  const response = await axios({
+    method: 'post',
+    url: `${baseURL}/ordering-api/api/order/${orderId}/append`,
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    data,
+  }).catch(handleAPIError);
+  return response ? response.data : null;
+}
+
+

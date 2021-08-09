@@ -48,8 +48,9 @@ const authUrl = `${testData.BASE_URL}/auth-oauth2/oauth/token`;
 
 test('getAuthData - return existing token if it is still valid ', async () => {
   const refreshHandler = {
-    getRefreshToken: () => 'TEST_REFRESH_TOKEN',
-    setRefreshToken: () => {},
+    getRefreshToken: (tenant: string) => 'TEST_REFRESH_TOKEN',
+    setRefreshToken: (tenant: string) => {},
+    clearRefreshToken: (tenant: string) => {},
   };
   const ctx = {
     BASE_URL: testData.BASE_URL,
@@ -61,12 +62,14 @@ test('getAuthData - return existing token if it is still valid ', async () => {
   const timeFreeze = new Date('2020-10-01T00:10:01.30Z'); //zero time
   const resetDateMock = mockDate(timeFreeze);
   auth.setAuthData(
+    'tenant1',
     {
       expires_in: '3600',
       access_token: '123456',
       UUID: 'user1',
       refresh_token: 'refresh1',
     },
+    refreshHandler,
     new Date('2020-10-01T00:09:01.30Z').valueOf(), //1 minute ago
   );
   const { token, UUID } = await auth.authDataProvider(
@@ -101,8 +104,9 @@ test('getAuthData - use refresh token to retrieve new token if existing token ex
     }),
   );
   const refreshHandler = {
-    getRefreshToken: () => 'TEST_REFRESH_TOKEN',
-    setRefreshToken: () => {},
+    getRefreshToken: (tenant: string) => 'TEST_REFRESH_TOKEN',
+    setRefreshToken: (tenant: string) => {},
+    clearRefreshToken: (tenant: string) => {},
   };
   const ctx = {
     BASE_URL: testData.BASE_URL,
@@ -114,12 +118,14 @@ test('getAuthData - use refresh token to retrieve new token if existing token ex
   const timeFreeze = new Date('2020-10-01T12:10:01.30Z'); //zero time
   const resetDateMock = mockDate(timeFreeze);
   auth.setAuthData(
+    'tenant1',
     {
       expires_in: '3600',
       access_token: '123456',
       UUID: 'user1',
       refresh_token: 'refresh1',
     },
+    refreshHandler,
     new Date('2020-10-01T11:09:01.30Z').valueOf(), //1 hour and 1 minute ago (token shoud be expired)
   );
   const { token, UUID } = await auth.authDataProvider(
