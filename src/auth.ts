@@ -56,11 +56,11 @@ export async function authorizeWithRefreshToken(
     response = await axios(req);
     _authData = response.data;
     tokenRetrieveTimeMs = new Date().getTime();
-    console.log('REFRESH TOKEN AUTH RESULT ***');
-    console.log(_authData);
+    //console.log('REFRESH TOKEN AUTH RESULT ***');
+    //console.log(_authData);
     return true;
   } catch (error) {
-    console.error('Authorization error');
+    //console.error('Authorization error');
     //console.error(error)
     return false;
   }

@@ -39,9 +39,19 @@ export const cmdOrderCreate = async (
   return { id, correlationId };
 };
 
-export const onOrderUpdate = (orderData: any) => {
+export const onOrderUpdate = (
+  orderData: any,
+  isKDS: boolean,
+  venueId: string,
+) => {
   const id = orderData.id;
   if (!id) return;
+  if (isKDS) {
+    const orderVenues: string[] = orderData.buckets?.map((b: any) => b.venue);
+    if (!orderVenues?.includes(venueId)) {
+      return;
+    }
+  }
   //console.log('-------- onOrderUpdate ' + id);
   if (!orderRecords[id]) {
     if (orderData.closed) return;

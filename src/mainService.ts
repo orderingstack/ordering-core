@@ -35,17 +35,17 @@ export function orderChangesListener(
           orders = await orderService.pullOrders(BASE_URL, VENUE, accessToken);
         }
         for (const order of orders) {
-          orderStore.onOrderUpdate(order);
+          orderStore.onOrderUpdate(order, enableKDS, VENUE);
         }
         resolve();
       },
       onDisconnectAsync: async (): Promise<void> => {
-        //console.log('ws disconnected');
+        console.log('ws disconnected');
       },
       onKDSMessageAsync: null,
       onOrdersUpdateAsync: async (order: any): Promise<void> => {
         //console.log(`new or updated order [${order.id}]`);
-        orderStore.onOrderUpdate(order);
+        orderStore.onOrderUpdate(order, enableKDS, VENUE);
       },
       onNotificationAsync: async (message: any): Promise<void> => {
         //console.log(`NOTIFICATION: ${JSON.stringify(message)}`);
@@ -60,7 +60,7 @@ export function orderChangesListener(
     if (enableKDS) {
       params.onKDSMessageAsync = async (message: any): Promise<void> => {
         //console.log(`MESSAGE  order [${message.id}]`);
-        orderStore.onOrderUpdate(message);
+        orderStore.onOrderUpdate(message, enableKDS, VENUE);
       };
     }
     listener.connectWebSockets(params);
