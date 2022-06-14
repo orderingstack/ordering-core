@@ -48,9 +48,9 @@ const authUrl = `${testData.BASE_URL}/auth-oauth2/oauth/token`;
 
 test('getAuthData - return existing token if it is still valid ', async () => {
   const refreshHandler = {
-    getRefreshToken: (tenant: string) => 'TEST_REFRESH_TOKEN',
-    setRefreshToken: (tenant: string) => {},
-    clearRefreshToken: (tenant: string) => {},
+    getRefreshToken: (tenant: string) => new Promise<string>((resolve)=> resolve('TEST_REFRESH_TOKEN')),
+    setRefreshToken: (tenant: string) => new Promise<void>((resolve)=> resolve() ),
+    clearRefreshToken: (tenant: string) => new Promise<void>((resolve)=> resolve() ),
   };
   const ctx = {
     BASE_URL: testData.BASE_URL,

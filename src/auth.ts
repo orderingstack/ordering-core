@@ -87,7 +87,7 @@ export const authDataProvider: IAuthDataProvider = async (
   }
   //console.log('******** GET AUTH TOKEN (REMOTE CALL) ********');
   let loginSuccess = false;
-  const refreshToken = refreshTokenStorageHandler.getRefreshToken(ctx.TENANT);
+  const refreshToken = await refreshTokenStorageHandler.getRefreshToken(ctx.TENANT);
   if (refreshToken) {
     //console.log('*** AUTHORIZE WITH REFRESH TOKEN ');
     loginSuccess = await authorizeWithRefreshToken(

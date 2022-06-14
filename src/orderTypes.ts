@@ -150,9 +150,9 @@ export interface IOrderRec {
 }
 
 export interface IRefreshTokenStorageHandler {
-  getRefreshToken(tenant: string): string;
-  setRefreshToken(tenant: string, refreshToken: string): void;
-  clearRefreshToken(tenant: string): void;
+  getRefreshToken(tenant: string): Promise<string>|string;
+  setRefreshToken(tenant: string, refreshToken: string): Promise<void>|void;
+  clearRefreshToken(tenant: string): Promise<void>|void;
 }
 
 export interface IAuthData {
