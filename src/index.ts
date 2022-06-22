@@ -15,7 +15,8 @@ export {
   IExtra,
   IRefreshTokenStorageHandler,
   IUser,
-  IConfiguredAuthDataProvider
+  IConfiguredAuthDataProvider,
+  IEditableUserData
 } from './orderTypes';
 export {
   postNewOrder,
@@ -42,7 +43,8 @@ export {
   authorizeWithUserPass,
   setAuthData,
   clearAuthData,
-  getLoggedUserData
+  getLoggedUserData,
+  updateUserData,
 } from './auth';
 export { ConnectWebSocketsParams, connectWebSockets } from './wsListener';
 export { orderChangesListener } from './mainService';

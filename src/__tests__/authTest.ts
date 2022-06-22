@@ -1,8 +1,9 @@
 import * as auth from '../auth';
 import { server } from '../__mocks__/server';
-import { rest } from 'msw';
+import { rest, restContext } from 'msw';
 import querystring from 'querystring';
 import { mockDate } from '../__mocks__/mockDate';
+import { getLoggedUserData, updateUserData } from '../auth';
 
 const testData = {
   ADMIN_USER: 'test@test.pl',
@@ -137,3 +138,54 @@ test('getAuthData - use refresh token to retrieve new token if existing token ex
   expect(UUID).toBe('user_uuid123');
   resetDateMock();
 });
+
+const userDataUrl = `${testData.BASE_URL}/auth-api/api/me`;
+const validUserData = {
+  firstName: "testname",
+  email: "email@email.com",
+  UUID: "uuid_1"
+}
+
+beforeEach(()=>{
+  // Setup server
+  server.use(
+    rest.get(userDataUrl, (req, res, ctx) =>{
+      if (req.headers.get("authorization") === "Bearer VALID_TEST_TOKEN"){
+        return res(        ctx.status(200),
+          ctx.json(validUserData))
+      }
+    })
+  )
+
+  server.use(
+    rest.post(userDataUrl, (req, res, ctx) =>{
+      if (req.headers.get("authorization") === "Bearer VALID_TEST_TOKEN"){
+        return res(        ctx.status(200),
+          ctx.json(true))
+      }
+      return res(ctx.status(401))
+    })
+  )
+})
+
+test("getLoggedUserData", async()=>{
+  const userData = await getLoggedUserData(testData.BASE_URL, "VALID_TEST_TOKEN")
+  expect(userData).toMatchObject(validUserData)
+})
+
+test("updateUserData", async()=>{
+  const result = await updateUserData(testData.BASE_URL, "VALID_TEST_TOKEN", {
+    phone: "123",
+    firstName: "testname"
+  })
+  expect(result).toBe(true)
+})
+
+test("updateUserData - invalid token", async()=>{
+  const onError = jest.fn()
+  await updateUserData(testData.BASE_URL, "INVALID_TEST_TOKEN", {
+    phone: "123",
+    firstName: "testname"
+  }).catch(onError)
+  expect(onError).toHaveBeenCalled()
+})

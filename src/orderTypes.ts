@@ -155,6 +155,11 @@ export interface IRefreshTokenStorageHandler {
   clearRefreshToken(tenant: string): Promise<void>|void;
 }
 
+export interface IEditableUserData {
+  firstName?: string;
+  phone?: string;
+}
+
 export interface IAuthData {
   expires_in: string;
   access_token: string;

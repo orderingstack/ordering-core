@@ -1,5 +1,11 @@
 import axios from 'axios';
-import { IAuthData, IAuthDataProvider, IConfiguredAuthDataProvider, IRefreshTokenStorageHandler } from './orderTypes';
+import {
+  IAuthData,
+  IAuthDataProvider,
+  IConfiguredAuthDataProvider,
+  IEditableUserData,
+  IRefreshTokenStorageHandler,
+} from './orderTypes';
 import {handleAPIError} from './apiTools'
 
 let _authData: IAuthData;
@@ -144,4 +150,14 @@ export async function getLoggedUserData(baseURL: string, token: string) {
       },      
     }).catch(handleAPIError);
     return response ? response.data : null;
+}
+
+export async function updateUserData(baseURL: string, token: string, userData:IEditableUserData):Promise<boolean> {
+  const response = await axios.post(`${baseURL}/auth-api/api/me`, userData, {
+    headers:{
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+  }).catch(handleAPIError)
+  return response && response.data || false
 }
