@@ -16,7 +16,8 @@ export {
   IRefreshTokenStorageHandler,
   IUser,
   IConfiguredAuthDataProvider,
-  IEditableUserData
+  IEditableUserData,
+  EOrderStatus
 } from './orderTypes';
 export {
   postNewOrder,
