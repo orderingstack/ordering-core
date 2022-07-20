@@ -158,6 +158,7 @@ export interface IRefreshTokenStorageHandler {
 export interface IEditableUserData {
   firstName?: string;
   phone?: string;
+  pushId?: string;
 }
 
 export interface IAuthData {
