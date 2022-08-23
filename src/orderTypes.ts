@@ -92,6 +92,7 @@ export enum EOrderSource {
  * @customer-phone {string} customer phone from aggregator
  * @requiresVatInvoice {boolean}
  * @allergies {string} customer allergies from aggregator
+ * @x-agg-id {string} order ID from aggregator
  */
 export interface IOrderExtra {
   "x-source"?: EOrderSource;
@@ -104,6 +105,7 @@ export interface IOrderExtra {
   "customer-phone"?: string;
   requiresVatInvoice?: boolean;
   allergies?: string;
+  'x-agg-id'?: string
 }
 
 export interface IOrderInBucket {
