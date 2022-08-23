@@ -8,26 +8,34 @@ export interface IUser {
 }
 
 export enum EOrderType {
-  TAKE_AWAY,
-  DELIVERY,
-  DINE_IN,
-  DINE_IN_OPEN,
+  TAKE_AWAY = "TAKE_AWAY",
+  DELIVERY = "DELIVERY",
+  DINE_IN = "DINE_IN",
+  DINE_IN_OPEN = "DINE_IN_OPEN",
 }
 
+// https://docs.orderingstack.com/order/
 export enum EOrderStatus {
-  NEW,
-  COMPLETED,
-  DELIVER,
+  NEW = "NEW",
+  COMPLETED = "COMPLETED", // Payments === total
+  VERIFIED = "VERIFIED", // auto or manually set when conditions are met i.e fiscalization
+  DELIVER = "DELIVER", // all lines have final state
+  DELIVERED = "DELIVERED",
+  CLOSED = "CLOSED",
+  ABANDONED = "ABANDONED",
+  CANCELLED = "CANCELLED",
+  PICKED_UP = "PICKED_UP", // order given to the courier e.g. glovo driver
+
 }
 export enum EOrderLineStatus {
-  NEW,
-  CONFIRMED,
+  NEW = "NEW",
+  CONFIRMED = "CONFIRMED",
 }
 
 export enum EOrderPaymentType {
-  CASH,
-  COD,
-  EPAYMENT,
+  CASH = "CASH",
+  COD = "COD",
+  EPAYMENT = "EPAYMENT",
 }
 
 export interface IOrder {
@@ -46,7 +54,7 @@ export interface IOrder {
     lng: number;
   };
   source?: string;
-  users?: IUser;
+  users?: IUser[];
   orderType: EOrderType;
   total?: number;
   editTotal?: number;
@@ -54,12 +62,48 @@ export interface IOrder {
   statusInfo?: string;
   closed?: boolean;
   completed?: boolean;
+  verified?: boolean;
   claimCode?: string;
   buckets: IOrderInBucket[];
   loyaltyId?: string;
   coupons?: IOrderCoupon[];
   payments?: IOrderPayment[];
   comments?: IOrderComment[];
+  extra?: IOrderExtra;
+}
+
+export enum EOrderSource {
+  KIOSK = "KIOSK",
+  WEB = "WEB",
+  JUST_EAT_TAKE_AWAY = "JUSTEATTAKEAWAY",
+  GLOVO = "GLOVO",
+  PYSZNE = "PYSZNE"
+}
+
+/**
+ * IOrderExtra interface
+ *
+ * @interface IOrderExtra
+ * @manual-verify {string} order needs manual verification
+ * @collect-time {string} estimated pickup time from aggregator
+ * @courier-name {string} courier name from aggregator
+ * @courier-phone {string} courier phone from aggregator
+ * @customer-name {string} customer name from aggregator
+ * @customer-phone {string} customer phone from aggregator
+ * @requiresVatInvoice {boolean}
+ * @allergies {string} customer allergies from aggregator
+ */
+export interface IOrderExtra {
+  "x-source"?: EOrderSource;
+  "x-source-type"?: "INTEGRATOR",
+  "manual-verify"?: string;
+  "collect-time"?: string;
+  "courier-name"?: string;
+  "courier-phone"?: string;
+  "customer-name"?: string;
+  "customer-phone"?: string;
+  requiresVatInvoice?: boolean;
+  allergies?: string;
 }
 
 export interface IOrderInBucket {
@@ -77,25 +121,41 @@ export interface IOrderLine {
   id: string;
   creator: string;
   created: Date;
+  hash: string;
   updated: Date;
   source: string;
+  status: EOrderStatus;
   quantity: number;
   price: number;
   productId: string;
   product: IOrderProduct;
+  productConfig: IProductConfig;
   extra: IExtra;
+  total: number;
+  // TODO find discounts structure
+  discounts: any[];
+}
+
+export enum EOrderProductKind {
+  GROUP = "group",
+  PRODUCT = "product",
 }
 
 export interface IOrderProduct {
   id: string;
-  kind: string;
+  kind: EOrderProductKind;
   literals: IProductLiterals;
-  items: IOrderProduct[];
+  items?: IOrderProduct[];
   img: string;
   quantity: number;
   price: number;
   extra: IExtra;
 }
+
+export interface IProductConfig {
+  selected: any;
+  filter: any;
+};
 
 export interface IProductLiterals {
   [propName: string]: any;

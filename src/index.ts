@@ -17,7 +17,11 @@ export {
   IUser,
   IConfiguredAuthDataProvider,
   IEditableUserData,
-  EOrderStatus
+  EOrderStatus,
+  EOrderType,
+  EOrderSource,
+  EOrderPaymentType,
+  EOrderProductKind,
 } from './orderTypes';
 export {
   postNewOrder,
