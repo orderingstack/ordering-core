@@ -161,3 +161,19 @@ export async function updateUserData(baseURL: string, token: string, userData:IE
   }).catch(handleAPIError)
   return response && response.data || false
 }
+
+export async function deleteUser(baseURL: string, token: string):Promise<boolean> {
+  const { login } = await getLoggedUserData(baseURL, token);
+  const response = await axios.request<boolean>(
+    {
+          url: `${baseURL}/auth-api/api/me`,
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          data: {login}
+        }
+    ).catch(handleAPIError)
+  return response && response.data || false
+}

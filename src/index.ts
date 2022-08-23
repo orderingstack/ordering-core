@@ -50,6 +50,7 @@ export {
   clearAuthData,
   getLoggedUserData,
   updateUserData,
+  deleteUser
 } from './auth';
 export { ConnectWebSocketsParams, connectWebSockets } from './wsListener';
 export { orderChangesListener } from './mainService';
