@@ -22,12 +22,13 @@ export const orderServerTool: IOrderServerTool = {
     return retVal;
   },
   fetchOrder: (ctx: any, id: string, tokenProvider: IAuthDataProvider) => {
+    // @ts-ignore
     const order: IOrder = {
       id,
       tenant: 'tenant1',
       orderType: EOrderType.DELIVERY,
       status: EOrderStatus.NEW,
-      created: new Date('2021-01-01'),
+      created: new Date('2021-01-01').toISOString(),
       buckets: [],
     };
     return order;

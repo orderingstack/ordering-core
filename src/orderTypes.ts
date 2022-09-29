@@ -12,6 +12,10 @@ export enum EOrderType {
   DELIVERY = "DELIVERY",
   DINE_IN = "DINE_IN",
   DINE_IN_OPEN = "DINE_IN_OPEN",
+  GLOVO_DELIVERY = "GLOVO_DELIVERY",
+  GLOVO_TAKE_AWAY = "GLOVO_TAKE_AWAY",
+  JUSTEAT_DELIVERY = "JUSTEAT_DELIVERY",
+  JUSTEAT_TAKE_AWAY = "JUSTEAT_TAKE_AWAY"
 }
 
 // https://docs.orderingstack.com/order/
@@ -34,42 +38,110 @@ export enum EOrderLineStatus {
 
 export enum EOrderPaymentType {
   CASH = "CASH",
+  CARD = "CARD",
   COD = "COD",
+  TERMINAL = "TERMINAL",
   EPAYMENT = "EPAYMENT",
+  COUPON = "COUPON",
+  WALLET= "WALLET",
+  PREAUTHORIZED = "PREAUTHORIZED",
+  RETURN = "RETURN",
+  EXTERNAL = "EXTERNAL"
 }
 
+
+
 export interface IOrder {
-  id: string;
   tenant: string;
-  created: Date;
-  lastChanged?: Date;
-  completedTime?: Date;
-  closedDate?: Date;
-  processingStartedTime?: Date;
-  deliveredTime?: Date;
-  due?: Date;
+  id: string;
+  extId?: string;
+  created: string;
+  due?: string;
+  closedDate?: string;
+  lastChanged?: string;
+  completedTime?: string;
+  verifiedTime?: string;
+  processingStartedTime?: string;
+  deliveredTime?: string;
+  source: string;
+  users?: IUser[];
+  loyaltyId?: string;
+  coupons?: IOrderCoupon[];
+  orderType: EOrderType;
   deliveryAddress?: IOrderDeliveryAddress;
   geoPosition?: {
     lat: number;
     lng: number;
   };
-  source?: string;
-  users?: IUser[];
-  orderType: EOrderType;
-  total?: number;
-  editTotal?: number;
+  total: number;
+  editTotal: number;
   status: EOrderStatus;
   statusInfo?: string;
-  closed?: boolean;
-  completed?: boolean;
-  verified?: boolean;
+  comments?: IOrderComment[];
   claimCode?: string;
   buckets: IOrderInBucket[];
-  loyaltyId?: string;
-  coupons?: IOrderCoupon[];
   payments?: IOrderPayment[];
-  comments?: IOrderComment[];
+  fiscal?: IOrderFiscal[];
+  tax: ITaxSummary[];
   extra?: IOrderExtra;
+  traces?: {
+    [propName: string]: string
+  }
+  logs?: IOrderLog[];
+  locked?: boolean;
+  completed?: boolean;
+  verified?: boolean;
+  closed?: boolean;
+}
+
+export interface IOrderLog {
+  timestamp?: string;
+  user?: string
+  ip?: string;
+  message?: string;
+  lines?: string[]
+}
+
+export interface ITaxSummary {
+  rate: string;
+  confirmed?: boolean;
+  netto: number;
+  tax: number;
+  brutto: number
+}
+
+export interface IOrderFiscal {
+  timestamp: string;
+  user?: string;
+  venue?: string;
+  amount: number;
+  printer: string;
+  slip: string;
+  taxId?: string;
+  message?: string;
+  entries: ISlipEntry[];
+  payments?: {
+    [propName: string]: number
+  };
+  subTotalDiscounts?: ISubTotalDiscount[];
+  extra: {
+    [propName: string]: number
+  }
+}
+
+export interface ISlipEntry {
+  item: string;
+  qty: number;
+  price: number;
+  discount?: number;
+  total: number;
+  vat: string
+}
+
+export interface ISubTotalDiscount {
+  name: string;
+  discount: number;
+  vat: string
 }
 
 export enum EOrderSource {
@@ -103,39 +175,52 @@ export interface IOrderExtra {
   "courier-phone"?: string;
   "customer-name"?: string;
   "customer-phone"?: string;
-  requiresVatInvoice?: boolean;
+  requiresVatInvoice?: string;
   allergies?: string;
   'x-agg-id'?: string
 }
 
+export interface IDiscount {
+  layer: string;
+  name?: string;
+  discountPrice: number;
+  type: string;
+  product: string;
+  path?: string;
+  price: number;
+}
+
 export interface IOrderInBucket {
   venue: string;
+  sync: boolean,
+  syncId: string,
   name: string;
   menu: string;
   lines: IOrderLine[];
   priceList?: string;
   warehouse?: string;
-  queuePos?: number;
+  queuePos?: string;
   extra?: IExtra;
 }
 
 export interface IOrderLine {
   id: string;
-  creator: string;
-  created: Date;
-  hash: string;
-  updated: Date;
+  creator?: string;
+  created: string;
+  updated: string;
   source: string;
-  status: EOrderStatus;
   quantity: number;
   price: number;
   productId: string;
   product: IOrderProduct;
   productConfig: IProductConfig;
+  bom: Object;
+  status: EOrderStatus;
+  comments?: IOrderComment[]
+  discounts?: IDiscount[];
   extra: IExtra;
+  hash: string;
   total: number;
-  // TODO find discounts structure
-  discounts: any[];
 }
 
 export enum EOrderProductKind {
@@ -169,6 +254,8 @@ export interface IExtra {
 
 export interface IOrderCoupon {
   coupon: string;
+  addedAt: string;
+  addedBy: string;
 }
 
 export interface IOrderPayment {
@@ -176,16 +263,16 @@ export interface IOrderPayment {
   type: EOrderPaymentType;
   source: string;
   amount: number;
-  initialAmount: number;
+  initialAmount?: number;
   user: string;
-  timestamp: Date;
-  extra: IExtra;
+  timestamp?: string;
+  extra?: IExtra;
 }
 
 export interface IOrderComment {
   id: string;
   creator: string;
-  timestamp: Date;
+  timestamp?: string;
   comment: string;
   extra?: IExtra;
 }
@@ -193,8 +280,8 @@ export interface IOrderComment {
 export interface IOrderDeliveryAddress {
   street: string;
   number: string;
-  door: string;
-  postal: string;
+  door?: string;
+  postal?: string;
   city: string;
   country: string;
 }
