@@ -28,7 +28,7 @@ export enum EOrderStatus {
   CLOSED = "CLOSED",
   ABANDONED = "ABANDONED",
   CANCELLED = "CANCELLED",
-  PICKED_UP = "PICKED_UP", // order given to the courier e.g. glovo driver
+  PICKED = "PICKED", // order given to the courier e.g. glovo driver
 
 }
 export enum EOrderLineStatus {

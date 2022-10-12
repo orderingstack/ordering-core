@@ -22,6 +22,7 @@ export {
   EOrderSource,
   EOrderPaymentType,
   EOrderProductKind,
+  EOrderLineStatus
 } from './orderTypes';
 export {
   postNewOrder,
