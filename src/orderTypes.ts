@@ -33,7 +33,12 @@ export enum EOrderStatus {
 }
 export enum EOrderLineStatus {
   NEW = "NEW",
+  TECHNICAL = "TECHNICAL",
   CONFIRMED = "CONFIRMED",
+  PROCESSING = "PROCESSING",
+  PROCESSED = "PROCESSED",
+  VOID = "VOID",
+  WASTE = "WASTE"
 }
 
 export enum EOrderPaymentType {
@@ -149,7 +154,9 @@ export enum EOrderSource {
   WEB = "WEB",
   JUST_EAT_TAKE_AWAY = "JUSTEATTAKEAWAY",
   GLOVO = "GLOVO",
-  PYSZNE = "PYSZNE"
+  PYSZNE = "PYSZNE",
+  WOLT = "WOLT",
+  UBER = "UBER"
 }
 
 /**
@@ -215,7 +222,7 @@ export interface IOrderLine {
   product: IOrderProduct;
   productConfig: IProductConfig;
   bom: Object;
-  status: EOrderStatus;
+  status: EOrderLineStatus;
   comments?: IOrderComment[]
   discounts?: IDiscount[];
   extra: IExtra;
