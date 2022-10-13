@@ -1,6 +1,6 @@
 {
   "name": "@orderingstack/ordering-core",
-  "version": "0.3.4",
+  "version": "0.3.5",
   "description": "Ordering Stack client core library",
   "main": "./lib/cjs/index.js",
   "module": "./lib/esm/index.js",

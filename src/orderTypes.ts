@@ -156,7 +156,8 @@ export enum EOrderSource {
   GLOVO = "GLOVO",
   PYSZNE = "PYSZNE",
   WOLT = "WOLT",
-  UBER = "UBER"
+  UBER = "UBER",
+  BOLT = "BOLT"
 }
 
 /**
