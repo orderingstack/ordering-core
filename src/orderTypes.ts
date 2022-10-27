@@ -171,7 +171,7 @@ export enum EOrderSource {
  *
  * @interface IOrderExtra
  * @manual-verify {string} order needs manual verification
- * @collect-time {string} estimated pickup time from aggregator
+ * @x-collect-time {string} estimated pickup time from aggregator
  * @courier-name {string} courier name from aggregator
  * @courier-phone {string} courier phone from aggregator
  * @customer-name {string} customer name from aggregator
@@ -185,7 +185,7 @@ export interface IOrderExtra {
   "x-source"?: EOrderSource;
   "x-source-type"?: "INTEGRATOR",
   "manual-verify"?: string;
-  "collect-time"?: string;
+  "x-collect-time"?: string;
   "courier-name"?: string;
   "courier-phone"?: string;
   "customer-name"?: string;
