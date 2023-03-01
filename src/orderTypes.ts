@@ -86,8 +86,8 @@ export interface IOrder {
     lat: number;
     lng: number;
   };
-  total: number;
-  editTotal: number;
+  total: string;
+  editTotal: string;
   status: EOrderStatus;
   statusInfo?: string;
   comments?: IOrderComment[];
