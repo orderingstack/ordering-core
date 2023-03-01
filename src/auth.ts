@@ -8,7 +8,7 @@ import {
 } from './orderTypes';
 import {handleAPIError} from './apiTools'
 
-let _authData: IAuthData;
+let _authData: IAuthData| null = null;
 let tokenRetrieveTimeMs: number = -1;
 
 export async function authorizeWithUserPass(
@@ -113,7 +113,7 @@ export const authDataProvider: IAuthDataProvider = async (
       '',
     );
   }
-  if (!loginSuccess) {
+  if (!loginSuccess || !_authData) {
     return { token: '', UUID: '' };
   } else {
     refreshTokenStorageHandler.setRefreshToken(ctx.TENANT, _authData.refresh_token);
@@ -138,6 +138,7 @@ export function setAuthData(tenant: string, newAuthData: IAuthData, refreshToken
 
 export function clearAuthData(tenant: string, refreshTokenStorageHandler:IRefreshTokenStorageHandler) {
     refreshTokenStorageHandler.clearRefreshToken(tenant);
+  _authData = null;
 }
 
 export async function getLoggedUserData(baseURL: string, token: string) {
