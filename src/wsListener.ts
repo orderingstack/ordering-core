@@ -1,4 +1,5 @@
 import { IAuthDataProvider, IConfiguredAuthDataProvider, IRefreshTokenStorageHandler } from './orderTypes';
+import {INotificationMessage}from "@orderingstack/ordering-types"
 
 import * as StompJs from '@stomp/stompjs';
 import { replaceProtocolInUrl } from './tools';
@@ -80,7 +81,7 @@ export async function connectWebSockets(params: ConnectWebSocketsParams) {
         var subscriptionForOrdersUpdate = client.subscribe(
           `/order-changes/${params.tenant}/${userUUID}`,
           async function (data: any) {
-            var message = JSON.parse(data.body);
+            var message = JSON.parse(data.body) as INotificationMessage
             await params.onOrdersUpdateAsync(message);
           },
         );

@@ -1,6 +1,6 @@
 {
   "name": "@orderingstack/ordering-core",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "Ordering Stack client core library",
   "main": "./lib/cjs/index.js",
   "module": "./lib/esm/index.js",
@@ -21,6 +21,7 @@
     "ws": "^7.3.1"
   },
   "devDependencies": {
+    "@orderingstack/ordering-types": "^1.6.0",
     "@types/jest": "^26.0.20",
     "@types/node": "^12.20.4",
     "jest": "^26.6.3",

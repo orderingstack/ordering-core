@@ -547,6 +547,11 @@
   resolved "https://registry.yarnpkg.com/@open-draft/until/-/until-1.0.3.tgz#db9cc719191a62e7d9200f6e7bab21c5b848adca"
   integrity sha512-Aq58f5HiWdyDlFffbbSjAlv596h/cOnt2DO1w3DOC7OJ5EHs0hd/nycJfiu9RJbT6Yk6F1knnRRXNSpxoIVZ9Q==
 
+"@orderingstack/ordering-types@^1.6.0":
+  version "1.6.0"
+  resolved "https://registry.yarnpkg.com/@orderingstack/ordering-types/-/ordering-types-1.6.0.tgz#0e1a1fb01856533a5d55b55e5e016c7d811f28d3"
+  integrity sha512-Bx33U3ESrfxzG+pll7U5PYiCdNU9YrRNep3WSVWNIQD+2HPUO6Sq6CerjVTPuWnaxHS+WuJBYevNHLcwFHNsxA==
+
 "@sinonjs/commons@^1.7.0":
   version "1.8.6"
   resolved "https://registry.yarnpkg.com/@sinonjs/commons/-/commons-1.8.6.tgz#80c516a4dc264c2a69115e7578d62581ff455ed9"
