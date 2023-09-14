@@ -4,6 +4,7 @@ import { rest, restContext } from 'msw';
 import querystring from 'querystring';
 import { mockDate } from '../__mocks__/mockDate';
 import { getLoggedUserData, updateUserData } from '../auth';
+import { IRefreshTokenStorageHandler } from '../orderTypes';
 
 const testData = {
   ADMIN_USER: 'test@test.pl',
@@ -35,12 +36,33 @@ test('getTokenWithRefreshToken', async () => {
   expect(authSuccess).toBe(true);
 });
 
+test('getAuthData - makes only 1 API call with multiple concurrent request for access_token having refresh_token', async () => {
+  const dispatchRequest = jest.fn();
+  server.events.on('request:start', dispatchRequest);
+  const tokenProvider: IRefreshTokenStorageHandler = {
+    getRefreshToken: jest.fn().mockResolvedValue('proper_refresh_token'),
+    setRefreshToken: jest.fn().mockResolvedValue(undefined),
+    clearRefreshToken: jest.fn().mockResolvedValue(undefined),
+  };
+  // Clear _authData from other tests
+  auth.clearAuthData('any_token', tokenProvider);
+  const results = await Promise.all(
+    Array(10)
+      .fill(0)
+      .map(() => auth.authDataProvider(testData, tokenProvider)),
+  );
+  expect(
+    results.every((result) => result.token === 'proper_access_token'),
+  ).toBe(true);
+  expect(dispatchRequest).toHaveBeenCalledTimes(1);
+});
+
 test('getTokenWithRefreshToken - wrong token', async () => {
   const authSuccess = await auth.authorizeWithRefreshToken(
     testData.BASE_URL,
     testData.TENANT,
     testData.BASIC_AUTH,
-    'proper_refresh_token1',
+    'invalid_token',
   );
   expect(authSuccess).toBe(false);
 });
@@ -49,9 +71,12 @@ const authUrl = `${testData.BASE_URL}/auth-oauth2/oauth/token`;
 
 test('getAuthData - return existing token if it is still valid ', async () => {
   const refreshHandler = {
-    getRefreshToken: (tenant: string) => new Promise<string>((resolve)=> resolve('TEST_REFRESH_TOKEN')),
-    setRefreshToken: (tenant: string) => new Promise<void>((resolve)=> resolve() ),
-    clearRefreshToken: (tenant: string) => new Promise<void>((resolve)=> resolve() ),
+    getRefreshToken: (tenant: string) =>
+      new Promise<string>((resolve) => resolve('TEST_REFRESH_TOKEN')),
+    setRefreshToken: (tenant: string) =>
+      new Promise<void>((resolve) => resolve()),
+    clearRefreshToken: (tenant: string) =>
+      new Promise<void>((resolve) => resolve()),
   };
   const ctx = {
     BASE_URL: testData.BASE_URL,
@@ -141,51 +166,52 @@ test('getAuthData - use refresh token to retrieve new token if existing token ex
 
 const userDataUrl = `${testData.BASE_URL}/auth-api/api/me`;
 const validUserData = {
-  firstName: "testname",
-  email: "email@email.com",
-  UUID: "uuid_1"
-}
+  firstName: 'testname',
+  email: 'email@email.com',
+  UUID: 'uuid_1',
+};
 
-beforeEach(()=>{
+beforeEach(() => {
   // Setup server
   server.use(
-    rest.get(userDataUrl, (req, res, ctx) =>{
-      if (req.headers.get("authorization") === "Bearer VALID_TEST_TOKEN"){
-        return res(        ctx.status(200),
-          ctx.json(validUserData))
+    rest.get(userDataUrl, (req, res, ctx) => {
+      if (req.headers.get('authorization') === 'Bearer VALID_TEST_TOKEN') {
+        return res(ctx.status(200), ctx.json(validUserData));
       }
-    })
-  )
+    }),
+  );
 
   server.use(
-    rest.post(userDataUrl, (req, res, ctx) =>{
-      if (req.headers.get("authorization") === "Bearer VALID_TEST_TOKEN"){
-        return res(        ctx.status(200),
-          ctx.json(true))
+    rest.post(userDataUrl, (req, res, ctx) => {
+      if (req.headers.get('authorization') === 'Bearer VALID_TEST_TOKEN') {
+        return res(ctx.status(200), ctx.json(true));
       }
-      return res(ctx.status(401))
-    })
-  )
-})
+      return res(ctx.status(401));
+    }),
+  );
+});
 
-test("getLoggedUserData", async()=>{
-  const userData = await getLoggedUserData(testData.BASE_URL, "VALID_TEST_TOKEN")
-  expect(userData).toMatchObject(validUserData)
-})
+test('getLoggedUserData', async () => {
+  const userData = await getLoggedUserData(
+    testData.BASE_URL,
+    'VALID_TEST_TOKEN',
+  );
+  expect(userData).toMatchObject(validUserData);
+});
 
-test("updateUserData", async()=>{
-  const result = await updateUserData(testData.BASE_URL, "VALID_TEST_TOKEN", {
-    phone: "123",
-    firstName: "testname"
-  })
-  expect(result).toBe(true)
-})
+test('updateUserData', async () => {
+  const result = await updateUserData(testData.BASE_URL, 'VALID_TEST_TOKEN', {
+    phone: '123',
+    firstName: 'testname',
+  });
+  expect(result).toBe(true);
+});
 
-test("updateUserData - invalid token", async()=>{
-  const onError = jest.fn()
-  await updateUserData(testData.BASE_URL, "INVALID_TEST_TOKEN", {
-    phone: "123",
-    firstName: "testname"
-  }).catch(onError)
-  expect(onError).toHaveBeenCalled()
-})
+test('updateUserData - invalid token', async () => {
+  const onError = jest.fn();
+  await updateUserData(testData.BASE_URL, 'INVALID_TEST_TOKEN', {
+    phone: '123',
+    firstName: 'testname',
+  }).catch(onError);
+  expect(onError).toHaveBeenCalled();
+});

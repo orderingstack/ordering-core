@@ -6,10 +6,12 @@ import {
   IEditableUserData,
   IRefreshTokenStorageHandler,
 } from './orderTypes';
-import {handleAPIError} from './apiTools'
+import { handleAPIError } from './apiTools';
+import { Mutex } from './utils/mutex';
 
-let _authData: IAuthData| null = null;
+let _authData: IAuthData | null = null;
 let tokenRetrieveTimeMs: number = -1;
+const mutex = new Mutex(250);
 
 export async function authorizeWithUserPass(
   baseUrl: string,
@@ -72,6 +74,19 @@ export async function authorizeWithRefreshToken(
   }
 }
 
+function isTokenExpired(authData: IAuthData | null): boolean {
+  // check if we can use current token
+  if (!authData || !authData.access_token) {
+    return true;
+  }
+
+  const secondsFromRetrievingExistingToken =
+    new Date().getTime() - tokenRetrieveTimeMs;
+  const expiryIfGreaterThan: number =
+    parseInt(authData.expires_in) * 1000 * 0.95; //miliseconds
+  return secondsFromRetrievingExistingToken >= expiryIfGreaterThan;
+}
+
 export const authDataProvider: IAuthDataProvider = async (
   ctx: any,
   refreshTokenStorageHandler,
@@ -79,29 +94,29 @@ export const authDataProvider: IAuthDataProvider = async (
 ): Promise<{ token: string; UUID: string }> => {
   // console.log( `authDataProvider invoked ----     currentToken=${  _authData ? _authData.access_token : '(null)'   }`, );
   if (!forceRefresh && _authData && _authData.access_token) {
-    // check if we can use current token
-    const secondsFromRetrievingExistingToken =
-      new Date().getTime() - tokenRetrieveTimeMs;
-    const expiryIfGreaterThan: number =
-      parseInt(_authData.expires_in) * 1000 * 0.95; //miliseconds
-    // console.log(
-    //   `--- SHOULD USE EXISTING TOKEN (${secondsFromRetrievingExistingToken} ms from retrieving, expires if >${expiryIfGreaterThan})  - result ${
-    //     secondsFromRetrievingExistingToken < expiryIfGreaterThan } `,);
-    if (secondsFromRetrievingExistingToken < expiryIfGreaterThan) {
+    if (!isTokenExpired(_authData)) {
       return { token: _authData.access_token, UUID: _authData.UUID };
     }
   }
   //console.log('******** GET AUTH TOKEN (REMOTE CALL) ********');
   let loginSuccess = false;
-  const refreshToken = await refreshTokenStorageHandler.getRefreshToken(ctx.TENANT);
+  const refreshToken = await refreshTokenStorageHandler.getRefreshToken(
+    ctx.TENANT,
+  );
   if (refreshToken) {
     //console.log('*** AUTHORIZE WITH REFRESH TOKEN ');
-    loginSuccess = await authorizeWithRefreshToken(
-      ctx.BASE_URL,
-      ctx.TENANT,
-      ctx.BASIC_AUTH,
-      refreshToken,
-    );
+    // use mutex to enforce max 1 api call at a time
+    loginSuccess = await mutex.getLock<boolean>(() => {
+      if (_authData && !isTokenExpired(_authData)) {
+        return Promise.resolve(true);
+      }
+      return authorizeWithRefreshToken(
+        ctx.BASE_URL,
+        ctx.TENANT,
+        ctx.BASIC_AUTH,
+        refreshToken,
+      );
+    });
   }
   if (!loginSuccess && ctx.anonymousAuth) {
     //console.log('**** ANONYMOUS AUTH ****');
@@ -116,7 +131,10 @@ export const authDataProvider: IAuthDataProvider = async (
   if (!loginSuccess || !_authData) {
     return { token: '', UUID: '' };
   } else {
-    refreshTokenStorageHandler.setRefreshToken(ctx.TENANT, _authData.refresh_token);
+    refreshTokenStorageHandler.setRefreshToken(
+      ctx.TENANT,
+      _authData.refresh_token,
+    );
     return { token: _authData.access_token, UUID: _authData.UUID };
   }
 };
@@ -129,52 +147,68 @@ export function createAuthDataProvider(
   return () => authDataProvider(ctx, refreshTokenProvider, forceRefresh);
 }
 
-export function setAuthData(tenant: string, newAuthData: IAuthData, refreshTokenStorageHandler:IRefreshTokenStorageHandler, newTokenRetrieveTimeMs: number = new Date().getTime()) {
+export function setAuthData(
+  tenant: string,
+  newAuthData: IAuthData,
+  refreshTokenStorageHandler: IRefreshTokenStorageHandler,
+  newTokenRetrieveTimeMs: number = new Date().getTime(),
+) {
   _authData = newAuthData;
   tokenRetrieveTimeMs = newTokenRetrieveTimeMs;
-  //TODO: dodac klucz dla storage zawierający TENANT
   refreshTokenStorageHandler.setRefreshToken(tenant, _authData.refresh_token);
 }
 
-export function clearAuthData(tenant: string, refreshTokenStorageHandler:IRefreshTokenStorageHandler) {
-    refreshTokenStorageHandler.clearRefreshToken(tenant);
+export function clearAuthData(
+  tenant: string,
+  refreshTokenStorageHandler: IRefreshTokenStorageHandler,
+) {
+  refreshTokenStorageHandler.clearRefreshToken(tenant);
   _authData = null;
 }
 
 export async function getLoggedUserData(baseURL: string, token: string) {
-    const response = await axios({
-      method: 'get',
-      url: `${baseURL}/auth-api/api/me`,
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },      
-    }).catch(handleAPIError);
-    return response ? response.data : null;
-}
-
-export async function updateUserData(baseURL: string, token: string, userData:IEditableUserData):Promise<boolean> {
-  const response = await axios.post(`${baseURL}/auth-api/api/me`, userData, {
-    headers:{
+  const response = await axios({
+    method: 'get',
+    url: `${baseURL}/auth-api/api/me`,
+    headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`,
     },
-  }).catch(handleAPIError)
-  return response && response.data || false
+  }).catch(handleAPIError);
+  return response ? response.data : null;
 }
 
-export async function deleteUser(baseURL: string, token: string):Promise<boolean> {
+export async function updateUserData(
+  baseURL: string,
+  token: string,
+  userData: IEditableUserData,
+): Promise<boolean> {
+  const response = await axios
+    .post(`${baseURL}/auth-api/api/me`, userData, {
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+    })
+    .catch(handleAPIError);
+  return (response && response.data) || false;
+}
+
+export async function deleteUser(
+  baseURL: string,
+  token: string,
+): Promise<boolean> {
   const { login } = await getLoggedUserData(baseURL, token);
-  const response = await axios.request<boolean>(
-    {
-          url: `${baseURL}/auth-api/api/me`,
-          method: 'DELETE',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          data: {login}
-        }
-    ).catch(handleAPIError)
-  return response && response.data || false
+  const response = await axios
+    .request<boolean>({
+      url: `${baseURL}/auth-api/api/me`,
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      data: { login },
+    })
+    .catch(handleAPIError);
+  return (response && response.data) || false;
 }

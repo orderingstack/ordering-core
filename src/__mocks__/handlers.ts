@@ -16,18 +16,30 @@ export const handlers = [
     if (grantType === 'password') {
       const username = params['username'];
       if (username === 'test@test.pl') {
-        return resp(ctx.status(200), ctx.json(goodAuthResponseBody));
+        return resp(
+          ctx.delay(2000),
+          ctx.status(200),
+          ctx.json(goodAuthResponseBody),
+        );
       }
       if (username === 'anonymous') {
-        return resp(ctx.status(200), ctx.json(goodAuthResponseBody));
+        return resp(
+          ctx.delay(2000),
+          ctx.status(200),
+          ctx.json(goodAuthResponseBody),
+        );
       }
     }
     if (grantType === 'refresh_token') {
       const refreshToken = params['refresh_token'];
       if (refreshToken === 'proper_refresh_token') {
-        return resp(ctx.status(200), ctx.json(goodAuthResponseBody));
+        return resp(
+          ctx.delay(2000),
+          ctx.status(200),
+          ctx.json(goodAuthResponseBody),
+        );
       }
     }
-    return resp(ctx.status(403));
+    return resp(ctx.delay(2000), ctx.status(403));
   }),
 ];
