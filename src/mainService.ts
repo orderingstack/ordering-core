@@ -6,7 +6,10 @@ import {
 import * as listener from './wsListener';
 import * as orderService from './orderService';
 import * as orderStore from './orderStore';
-import { INotificationMessage } from '@orderingstack/ordering-types';
+import {
+  INotificationMessage,
+  ISteeringCommand,
+} from '@orderingstack/ordering-types';
 
 export function orderChangesListener(
   BASE_URL: string,
@@ -17,7 +20,8 @@ export function orderChangesListener(
   onOrderUpdatedCallback: Function,
   _onAuthFailureCallback: Function,
   enableKDS: boolean,
-  websocketMessageCallback?: (message:INotificationMessage)=>void
+  websocketMessageCallback?: (message: INotificationMessage) => void,
+  onSteeringCommand?: (message: ISteeringCommand) => void,
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     orderStore.setOrderStoreUpdatedCallback(onOrderUpdatedCallback);
@@ -49,9 +53,11 @@ export function orderChangesListener(
         //console.log(`new or updated order [${order.id}]`);
         orderStore.onOrderUpdate(order, enableKDS, VENUE);
       },
-      onNotificationAsync: async (message: INotificationMessage): Promise<void> => {
+      onNotificationAsync: async (
+        message: INotificationMessage,
+      ): Promise<void> => {
         if (websocketMessageCallback) {
-          websocketMessageCallback(message)
+          websocketMessageCallback(message);
         }
         orderStore.onOrderError(message);
       },
@@ -60,6 +66,7 @@ export function orderChangesListener(
         if (_onAuthFailureCallback) await _onAuthFailureCallback();
       },
       enableKDS,
+      onSteeringCommand: onSteeringCommand,
     };
     if (enableKDS) {
       params.onKDSMessageAsync = async (message: any): Promise<void> => {

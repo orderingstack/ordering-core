@@ -1,5 +1,12 @@
-import { IAuthDataProvider, IConfiguredAuthDataProvider, IRefreshTokenStorageHandler } from './orderTypes';
-import {INotificationMessage}from "@orderingstack/ordering-types"
+import {
+  IAuthDataProvider,
+  IConfiguredAuthDataProvider,
+  IRefreshTokenStorageHandler,
+} from './orderTypes';
+import {
+  INotificationMessage,
+  ISteeringCommand,
+} from '@orderingstack/ordering-types';
 
 import * as StompJs from '@stomp/stompjs';
 import { replaceProtocolInUrl } from './tools';
@@ -20,6 +27,7 @@ export interface ConnectWebSocketsParams {
   onKDSMessageAsync: any;
   onOrdersUpdateAsync: any;
   onNotificationAsync: any;
+  onSteeringCommand?: (message: any) => void;
   onAuthFailure: any;
   enableKDS: boolean;
 }
@@ -49,11 +57,12 @@ export async function connectWebSockets(params: ConnectWebSocketsParams) {
 
     beforeConnect: async function () {
       //console.log('--- beforeConnect --- ');
-      const { token, UUID } = await params.authDataProvider(
+      const { token, UUID } = await params
+        .authDataProvider
         // baseURL,
         // params.refreshTokenHandler,
         // false,
-      );
+        ();
       if (!token) {
         //console.error('Access token provider error - deactivating socket');
         client.deactivate();
@@ -81,7 +90,7 @@ export async function connectWebSockets(params: ConnectWebSocketsParams) {
         var subscriptionForOrdersUpdate = client.subscribe(
           `/order-changes/${params.tenant}/${userUUID}`,
           async function (data: any) {
-            var message = JSON.parse(data.body) as INotificationMessage
+            var message = JSON.parse(data.body) as INotificationMessage;
             await params.onOrdersUpdateAsync(message);
           },
         );
@@ -92,6 +101,15 @@ export async function connectWebSockets(params: ConnectWebSocketsParams) {
           async function (data: any) {
             var message = JSON.parse(data.body);
             await params.onNotificationAsync(message);
+          },
+        );
+      }
+      if (params.onSteeringCommand && params.venue) {
+        client.subscribe(
+          `/steering/${params.tenant}/${params.venue}`,
+          async function (data: any) {
+            var message = JSON.parse(data.body);
+            params.onSteeringCommand?.(message as ISteeringCommand);
           },
         );
       }
@@ -126,11 +144,12 @@ export async function connectWebSockets(params: ConnectWebSocketsParams) {
   };
 
   try {
-    const { token, UUID } = await params.authDataProvider(
+    const { token, UUID } = await params
+      .authDataProvider
       // params.baseURL,
       // params.refreshTokenHandler,
       // false,
-    );
+      ();
     stompConfig.connectHeaders = { login: token /*passcode: ''*/ };
     client = createNewClient(stompConfig);
     client.activate();
