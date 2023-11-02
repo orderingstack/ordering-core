@@ -22,8 +22,8 @@ export function orderChangesListener(
   enableKDS: boolean,
   websocketMessageCallback?: (message: INotificationMessage) => void,
   onSteeringCommand?: (message: ISteeringCommand) => void,
-): Promise<void> {
-  return new Promise((resolve, reject) => {
+): Promise<() => Promise<void>> {
+  return new Promise(async (resolve, reject) => {
     orderStore.setOrderStoreUpdatedCallback(onOrderUpdatedCallback);
     const params: listener.ConnectWebSocketsParams = {
       baseURL: BASE_URL,
@@ -31,6 +31,7 @@ export function orderChangesListener(
       venue: VENUE,
       authDataProvider: authDataProvider,
       onConnectedAsync: async (accessToken: any): Promise<any> => {
+        console.log('Websocket connected async');
         let orders;
         if (!enableKDS) {
           //console.log('-- pull orders for user -- ');
@@ -43,7 +44,6 @@ export function orderChangesListener(
         for (const order of orders) {
           orderStore.onOrderUpdate(order, enableKDS, VENUE);
         }
-        resolve();
       },
       onDisconnectAsync: async (): Promise<void> => {
         console.log('ws disconnected');
@@ -74,6 +74,7 @@ export function orderChangesListener(
         orderStore.onOrderUpdate(message, enableKDS, VENUE);
       };
     }
-    listener.connectWebSockets(params);
+    const disconnectFn = await listener.connectWebSockets(params);
+    resolve(disconnectFn);
   });
 }

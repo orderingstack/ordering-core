@@ -42,7 +42,9 @@ export interface ConnectWebSocketsParams {
  * @param {*} onDisconnectAsync
  * @param {*} onMessageAsync async function (message, accessToken) {....}
  */
-export async function connectWebSockets(params: ConnectWebSocketsParams) {
+export async function connectWebSockets(
+  params: ConnectWebSocketsParams,
+): Promise<() => Promise<void>> {
   let client: StompJs.Client;
   const baseURL = replaceProtocolInUrl(params.baseURL, 'wss://') + '/websocket';
   let userUUID: string = '';
@@ -153,8 +155,13 @@ export async function connectWebSockets(params: ConnectWebSocketsParams) {
     stompConfig.connectHeaders = { login: token /*passcode: ''*/ };
     client = createNewClient(stompConfig);
     client.activate();
+    return async () => {
+      await client.deactivate();
+      console.log('Websocket connection deactivated');
+    };
   } catch (err) {
     console.error(err);
+    return () => Promise.resolve();
   }
 }
 
