@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Feature:
   - steering commands
 
+## [1.3.0] - 2023-10-12
+- Feature:
+  - steering commands
+
 ## [1.2.0] - 2023-09-13
 - Feature:
   - use mutex to limit API calls when multiple authProvider() requests are made before 1st call is resolved
