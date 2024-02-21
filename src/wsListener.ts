@@ -10,6 +10,7 @@ import {
 
 import * as StompJs from '@stomp/stompjs';
 import { replaceProtocolInUrl } from './tools';
+import { ApplicationInsights } from '@microsoft/applicationinsights-web';
 if (typeof TextEncoder !== 'function') {
   const TextEncodingPolyfill = require('text-encoding');
   global.TextEncoder = TextEncodingPolyfill.TextEncoder;
@@ -30,21 +31,16 @@ export interface ConnectWebSocketsParams {
   onSteeringCommand?: (message: any) => void;
   onAuthFailure: any;
   enableKDS: boolean;
+  extra?: { appInsights?: ApplicationInsights; debugWs?: boolean };
 }
 
 /**
  * Create Stomp on websocket connection to Ordering Stack listening for new orders to process by handlers/callback (onMessageAsync)
- *
- * @param {*} tenant
- * @param {*} venue
- * @param {*} accessTokenProviderCallbackAsync function called before connecting to STOMP server. Should return access token.
- * @param {*} onConnectedAsync async function (accessToken) {....}
- * @param {*} onDisconnectAsync
- * @param {*} onMessageAsync async function (message, accessToken) {....}
  */
 export async function connectWebSockets(
   params: ConnectWebSocketsParams,
 ): Promise<() => Promise<void>> {
+  const { appInsights, debugWs } = params.extra || {};
   let client: StompJs.Client;
   const baseURL = replaceProtocolInUrl(params.baseURL, 'wss://') + '/websocket';
   let userUUID: string = '';
@@ -58,15 +54,41 @@ export async function connectWebSockets(
     heartbeatOutgoing: 4000,
 
     beforeConnect: async function () {
-      //console.log('--- beforeConnect --- ');
-      const { token, UUID } = await params
-        .authDataProvider
-        // baseURL,
-        // params.refreshTokenHandler,
-        // false,
-        ();
+      console.log('--- beforeConnect --- ');
+      debugWs &&
+        appInsights?.trackTrace({ message: 'websocket beforeConnect' });
+      let token = '';
+      let UUID = '';
+      let tries = 0;
+      while (!token && tries <= 8) {
+        const data = await params
+          .authDataProvider
+          // baseURL,
+          // params.refreshTokenHandler,
+          // false,
+          ();
+        token = data.token;
+        UUID = data.UUID;
+
+        // exponential backoff
+        !token && tries++;
+        !token && console.warn('WS no token. Exponential backoff');
+        !token &&
+          debugWs &&
+          appInsights?.trackTrace({
+            message: 'websocket no token. Exponential backoff',
+          });
+        !token &&
+          (await new Promise((resolve) =>
+            setTimeout(resolve, 1000 * Math.pow(2, tries)),
+          ));
+      }
       if (!token) {
-        //console.error('Access token provider error - deactivating socket');
+        appInsights?.trackTrace({
+          message:
+            'websocket Access token provider error - deactivating socket',
+        });
+        console.error('Access token provider error - deactivating socket');
         client.deactivate();
         if (params.onAuthFailure) params.onAuthFailure();
       }
@@ -127,32 +149,55 @@ export async function connectWebSockets(
       // Bad login/passcode typically will cause an error
       // Complaint brokers will set `message` header with a brief message. Body may contain details.
       // Compliant brokers will terminate the connection after any error
-      //console.error('Broker reported error: ' + frame.headers['message']);
-      //console.error('Additional details: ' + frame.body);
+      console.error(
+        'onStompError headers.message: ' + frame?.headers['message'],
+      );
+      debugWs &&
+        appInsights?.trackTrace({
+          message:
+            'websocket onStompError headers.message: ' +
+            frame?.headers['message'],
+        });
+      console.error('onStompError body: ' + frame.body);
       await client.deactivate();
 
       client = createNewClient(stompConfig);
       client.activate();
     },
     onWebSocketClose: function () {
-      //console.log('Websocket closed.');
+      debugWs &&
+        appInsights?.trackTrace({
+          message: 'websocket closed.',
+        });
+      console.log('Websocket closed.');
     },
-    onWebSocketError: function () {
-      //console.log('Websocket error.');
+    onWebSocketError: function (error) {
+      debugWs &&
+        appInsights?.trackTrace({
+          message: 'websocket error',
+          properties: { error },
+        });
+      console.log('Websocket error.');
     },
-    onUnhandledMessage: function () {},
+    onUnhandledMessage: function (message) {
+      debugWs &&
+        appInsights?.trackTrace({
+          message: 'websocket onUnhandledMessage',
+          properties: { message },
+        });
+    },
     logRawCommunication: true,
     discardWebsocketOnCommFailure: true,
   };
 
   try {
-    const { token, UUID } = await params
-      .authDataProvider
-      // params.baseURL,
-      // params.refreshTokenHandler,
-      // false,
-      ();
-    stompConfig.connectHeaders = { login: token /*passcode: ''*/ };
+    // const { token, UUID } = await params
+    //   .authDataProvider
+    //   // params.baseURL,
+    //   // params.refreshTokenHandler,
+    //   // false,
+    //   ();
+    // stompConfig.connectHeaders = { login: token /*passcode: ''*/ };
     client = createNewClient(stompConfig);
     client.activate();
     return async () => {

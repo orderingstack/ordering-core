@@ -10,6 +10,7 @@ import {
   INotificationMessage,
   ISteeringCommand,
 } from '@orderingstack/ordering-types';
+import { ApplicationInsights } from '@microsoft/applicationinsights-web';
 
 export function orderChangesListener(
   BASE_URL: string,
@@ -22,7 +23,12 @@ export function orderChangesListener(
   enableKDS: boolean,
   websocketMessageCallback?: (message: INotificationMessage) => void,
   onSteeringCommand?: (message: ISteeringCommand) => void,
+  extra?: {
+    appInsights?: ApplicationInsights;
+    debugWs?: boolean;
+  },
 ): Promise<() => Promise<void>> {
+  const { appInsights, debugWs } = extra || {};
   return new Promise(async (resolve, reject) => {
     orderStore.setOrderStoreUpdatedCallback(onOrderUpdatedCallback);
     const params: listener.ConnectWebSocketsParams = {
@@ -32,6 +38,8 @@ export function orderChangesListener(
       authDataProvider: authDataProvider,
       onConnectedAsync: async (accessToken: any): Promise<any> => {
         console.log('Websocket connected async');
+        debugWs &&
+          appInsights?.trackTrace({ message: 'websocket connected async' });
         let orders;
         if (!enableKDS) {
           //console.log('-- pull orders for user -- ');
@@ -46,16 +54,28 @@ export function orderChangesListener(
         }
       },
       onDisconnectAsync: async (): Promise<void> => {
-        console.log('ws disconnected');
+        console.log('websocket disconnected');
+        debugWs &&
+          appInsights?.trackTrace({ message: 'websocket disconnected' });
       },
       onKDSMessageAsync: null,
       onOrdersUpdateAsync: async (order: any): Promise<void> => {
+        debugWs &&
+          appInsights?.trackTrace({
+            message: 'websocket onOrdersUpdateAsync',
+            properties: { order },
+          });
         //console.log(`new or updated order [${order.id}]`);
         orderStore.onOrderUpdate(order, enableKDS, VENUE);
       },
       onNotificationAsync: async (
         message: INotificationMessage,
       ): Promise<void> => {
+        debugWs &&
+          appInsights?.trackTrace({
+            message: 'websocket onNotificationAsync',
+            properties: { message },
+          });
         if (websocketMessageCallback) {
           websocketMessageCallback(message);
         }
@@ -63,6 +83,10 @@ export function orderChangesListener(
       },
       onAuthFailure: async () => {
         console.log('------------- MANUAL AUTH REQUIRED ----------------- ');
+        debugWs &&
+          appInsights?.trackTrace({
+            message: 'websocket onAuthFailure',
+          });
         if (_onAuthFailureCallback) await _onAuthFailureCallback();
       },
       enableKDS,
