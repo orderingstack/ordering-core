@@ -34,7 +34,9 @@ test('invocation of onOrderUpdate (new id) should update orders map', () => {
       tenant: 'tenant1',
       orderType: EOrderType.DELIVERY,
       status: EOrderStatus.NEW,
+      // @ts-ignore
       created: new Date('2021-01-01'),
+      // @ts-ignore
       total: 501,
       buckets: [],
     },
@@ -79,7 +81,9 @@ test('create order, update and update with close=true, should add and finaly rem
       tenant: 'tenant1',
       orderType: EOrderType.DELIVERY,
       status: EOrderStatus.NEW,
+      // @ts-ignore
       created: new Date('2021-01-01'),
+      // @ts-ignore
       total: 501,
       closed: true,
       buckets: [],
@@ -98,8 +102,11 @@ test('filter orders by venue in kds mode', () => {
       tenant: 'tenant1',
       orderType: EOrderType.DELIVERY,
       status: EOrderStatus.NEW,
+      // @ts-ignore
       created: new Date('2021-01-01'),
+      // @ts-ignore
       total: 501,
+      // @ts-ignore
       buckets: [{ venue: 'v1' }, { venue: 'v2' }],
     },
     true,
@@ -119,9 +126,12 @@ test('filter orders by venue in kds mode - negative variant', () => {
       tenant: 'tenant1',
       orderType: EOrderType.DELIVERY,
       status: EOrderStatus.NEW,
+      // @ts-ignore
       created: new Date('2021-01-01'),
+      // @ts-ignore
       total: 501,
       closed: true,
+      // @ts-ignore
       buckets: [{ venue: 'v1' }],
     },
     true,
