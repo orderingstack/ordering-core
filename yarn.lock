@@ -897,10 +897,10 @@
   resolved "https://registry.npmjs.org/@open-draft/until/-/until-1.0.3.tgz"
   integrity sha512-Aq58f5HiWdyDlFffbbSjAlv596h/cOnt2DO1w3DOC7OJ5EHs0hd/nycJfiu9RJbT6Yk6F1knnRRXNSpxoIVZ9Q==
 
-"@orderingstack/ordering-types@^1.16.0":
-  version "1.16.1"
-  resolved "https://registry.npmjs.org/@orderingstack/ordering-types/-/ordering-types-1.16.1.tgz"
-  integrity sha512-Gngs6FPE0bg18hdl4D4hu0U0dh7rS2sB/8FXFDtE8RVxccfqsiBiT+09mdQwroOMwSQQI38B3Ql9ihHPeqSM7w==
+"@orderingstack/ordering-types@^1.21.0":
+  version "1.21.0"
+  resolved "https://registry.yarnpkg.com/@orderingstack/ordering-types/-/ordering-types-1.21.0.tgz#c516b36b9502de20feb66f918ec31abd9a24bd7c"
+  integrity sha512-+wvVScS/MmiNBocnrasA2/zx6U8DqIwKOfjpZrGwxZYkZXSWB4IY4/8Bv6zhfUDhB8W2HnaKP4ts9FlMlkDJFQ==
 
 "@sinclair/typebox@^0.27.8":
   version "0.27.8"
@@ -2760,6 +2760,11 @@ pkg-dir@^4.2.0:
   integrity sha512-HRDzbaKjC+AOWVXxAU/x54COGeIv9eb+6CkDSQoNTt4XyWoIJvuPsXizxu/Fr23EiekbtZwmh1IcIG/l/a10GQ==
   dependencies:
     find-up "^4.0.0"
+
+prettier@^3.2.5:
+  version "3.2.5"
+  resolved "https://registry.yarnpkg.com/prettier/-/prettier-3.2.5.tgz#e52bc3090586e824964a8813b09aba6233b28368"
+  integrity sha512-3/GWa9aOC0YeD7LUfvOG2NiDyhOWRvt1k+rcKhOuYnMY24iiCphgneUfJDyFXd6rZCAnuLBv6UeAULtrhT/F4A==
 
 pretty-format@^29.0.0, pretty-format@^29.7.0:
   version "29.7.0"

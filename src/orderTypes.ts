@@ -1,3 +1,17 @@
+export {
+  IOrder,
+  EOrderStatus,
+  EOrderLineStatus,
+  EOrderType,
+  EOrderSource,
+  EOrderPaymentType,
+} from '@orderingstack/ordering-types';
+import {
+  IOrder,
+  EOrderLineStatus,
+  EOrderPaymentType,
+} from '@orderingstack/ordering-types';
+
 export interface IUser {
   userId: string;
   roles: string[];
@@ -5,197 +19,6 @@ export interface IUser {
   phone?: string;
   email?: string;
   extra?: IExtra;
-}
-
-export enum EOrderType {
-  TAKE_AWAY = "TAKE_AWAY",
-  DELIVERY = "DELIVERY",
-  DINE_IN = "DINE_IN",
-  DINE_IN_OPEN = "DINE_IN_OPEN",
-  GLOVO_DELIVERY = "GLOVO_DELIVERY",
-  GLOVO_TAKE_AWAY = "GLOVO_TAKE_AWAY",
-  JUSTEAT_DELIVERY = "JUSTEAT_DELIVERY",
-  JUSTEAT_TAKE_AWAY = "JUSTEAT_TAKE_AWAY",
-  UBER_DELIVERY = "UBER_DELIVERY",
-  UBER_TAKE_AWAY = "UBER_TAKE_AWAY",
-  UBER_DINE_IN = "UBER_DINE_IN",
-  BOLT_DELIVERY = "BOLT_DELIVERY",
-  BOLT_TAKE_AWAY = "BOLT_TAKE_AWAY",
-  WOLT_DELIVERY = "WOLT_DELIVERY",
-  WOLT_TAKE_AWAY = "WOLT_TAKE_AWAY",
-  WOLT_DINE_IN = "WOLT_DINE_IN"
-}
-
-// https://docs.orderingstack.com/order/
-export enum EOrderStatus {
-  NEW = "NEW",
-  COMPLETED = "COMPLETED", // Payments === total
-  VERIFIED = "VERIFIED", // auto or manually set when conditions are met i.e fiscalization
-  DELIVER = "DELIVER", // all lines have final state
-  DELIVERED = "DELIVERED",
-  CLOSED = "CLOSED",
-  ABANDONED = "ABANDONED",
-  CANCELLED = "CANCELLED",
-  PICKED = "PICKED", // order given to the courier e.g. glovo driver
-
-}
-export enum EOrderLineStatus {
-  NEW = "NEW",
-  TECHNICAL = "TECHNICAL",
-  CONFIRMED = "CONFIRMED",
-  PROCESSING = "PROCESSING",
-  PROCESSED = "PROCESSED",
-  VOID = "VOID",
-  WASTE = "WASTE"
-}
-
-export enum EOrderPaymentType {
-  CASH = "CASH",
-  CARD = "CARD",
-  COD = "COD",
-  TERMINAL = "TERMINAL",
-  EPAYMENT = "EPAYMENT",
-  COUPON = "COUPON",
-  WALLET= "WALLET",
-  PREAUTHORIZED = "PREAUTHORIZED",
-  RETURN = "RETURN",
-  EXTERNAL = "EXTERNAL"
-}
-
-
-
-export interface IOrder {
-  tenant: string;
-  id: string;
-  extId?: string;
-  created: string;
-  due?: string;
-  closedDate?: string;
-  lastChanged?: string;
-  completedTime?: string;
-  verifiedTime?: string;
-  processingStartedTime?: string;
-  deliveredTime?: string;
-  source: string;
-  users?: IUser[];
-  loyaltyId?: string;
-  coupons?: IOrderCoupon[];
-  orderType: EOrderType;
-  deliveryAddress?: IOrderDeliveryAddress;
-  geoPosition?: {
-    lat: number;
-    lng: number;
-  };
-  total: string;
-  editTotal: string;
-  status: EOrderStatus;
-  statusInfo?: string;
-  comments?: IOrderComment[];
-  claimCode?: string;
-  buckets: IOrderInBucket[];
-  payments?: IOrderPayment[];
-  fiscal?: IOrderFiscal[];
-  tax: ITaxSummary[];
-  extra?: IOrderExtra;
-  traces?: {
-    [propName: string]: string
-  }
-  logs?: IOrderLog[];
-  locked?: boolean;
-  completed?: boolean;
-  verified?: boolean;
-  closed?: boolean;
-}
-
-export interface IOrderLog {
-  timestamp?: string;
-  user?: string
-  ip?: string;
-  message?: string;
-  lines?: string[]
-}
-
-export interface ITaxSummary {
-  rate: string;
-  confirmed?: boolean;
-  netto: number;
-  tax: number;
-  brutto: number
-}
-
-export interface IOrderFiscal {
-  timestamp: string;
-  user?: string;
-  venue?: string;
-  amount: number;
-  printer: string;
-  slip: string;
-  taxId?: string;
-  message?: string;
-  entries: ISlipEntry[];
-  payments?: {
-    [propName: string]: number
-  };
-  subTotalDiscounts?: ISubTotalDiscount[];
-  extra: {
-    [propName: string]: number
-  }
-}
-
-export interface ISlipEntry {
-  item: string;
-  qty: number;
-  price: number;
-  discount?: number;
-  total: number;
-  vat: string
-}
-
-export interface ISubTotalDiscount {
-  name: string;
-  discount: number;
-  vat: string
-}
-
-export enum EOrderSource {
-  KIOSK = "KIOSK",
-  WEB = "WEB",
-  JUST_EAT_TAKE_AWAY = "JUSTEATTAKEAWAY",
-  GLOVO = "GLOVO",
-  PYSZNE = "PYSZNE",
-  WOLT = "WOLT",
-  UBER = "UBER",
-  BOLT = "BOLT"
-}
-
-/**
- * IOrderExtra interface
- *
- * @interface IOrderExtra
- * @manual-verify {string} order needs manual verification
- * @x-collect-time {string} estimated pickup time from aggregator
- * @courier-name {string} courier name from aggregator
- * @courier-phone {string} courier phone from aggregator
- * @customer-name {string} customer name from aggregator
- * @customer-phone {string} customer phone from aggregator
- * @requiresVatInvoice {boolean}
- * @allergies {string} customer allergies from aggregator
- * @x-agg-id {string} order ID from aggregator
- * @support-order-id {string} order code from aggregator to be used with support and same as seen by customer,
- */
-export interface IOrderExtra {
-  "x-source"?: EOrderSource;
-  "x-source-type"?: "INTEGRATOR",
-  "manual-verify"?: string;
-  "x-collect-time"?: string;
-  "courier-name"?: string;
-  "courier-phone"?: string;
-  "customer-name"?: string;
-  "customer-phone"?: string;
-  requiresVatInvoice?: string;
-  allergies?: string;
-  'x-agg-id'?: string;
-  'support-order-id'?: string;
 }
 
 export interface IDiscount {
@@ -210,8 +33,8 @@ export interface IDiscount {
 
 export interface IOrderInBucket {
   venue: string;
-  sync: boolean,
-  syncId: string,
+  sync: boolean;
+  syncId: string;
   name: string;
   menu: string;
   lines: IOrderLine[];
@@ -234,7 +57,7 @@ export interface IOrderLine {
   productConfig: IProductConfig;
   bom: Object;
   status: EOrderLineStatus;
-  comments?: IOrderComment[]
+  comments?: IOrderComment[];
   discounts?: IDiscount[];
   extra: IExtra;
   hash: string;
@@ -242,8 +65,8 @@ export interface IOrderLine {
 }
 
 export enum EOrderProductKind {
-  GROUP = "group",
-  PRODUCT = "product",
+  GROUP = 'group',
+  PRODUCT = 'product',
 }
 
 export interface IOrderProduct {
@@ -260,7 +83,7 @@ export interface IOrderProduct {
 export interface IProductConfig {
   selected: any;
   filter: any;
-};
+}
 
 export interface IProductLiterals {
   [propName: string]: any;
@@ -317,9 +140,9 @@ export interface IOrderRec {
 }
 
 export interface IRefreshTokenStorageHandler {
-  getRefreshToken(tenant: string): Promise<string>|string;
-  setRefreshToken(tenant: string, refreshToken: string): Promise<void>|void;
-  clearRefreshToken(tenant: string): Promise<void>|void;
+  getRefreshToken(tenant: string): Promise<string> | string;
+  setRefreshToken(tenant: string, refreshToken: string): Promise<void> | void;
+  clearRefreshToken(tenant: string): Promise<void> | void;
 }
 
 export interface IEditableUserData {
@@ -347,7 +170,7 @@ export interface IAuthDataProvider {
 }
 
 export interface IConfiguredAuthDataProvider {
-  ():  Promise<{
+  (): Promise<{
     token: string;
     UUID: string;
   }>;

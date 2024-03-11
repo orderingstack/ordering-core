@@ -1,6 +1,7 @@
 import {
   IAuthDataProvider,
   IConfiguredAuthDataProvider,
+  IOrderRec,
   IRefreshTokenStorageHandler,
 } from './orderTypes';
 import * as listener from './wsListener';
@@ -11,6 +12,7 @@ import {
   ISteeringCommand,
 } from '@orderingstack/ordering-types';
 import { ApplicationInsights } from '@microsoft/applicationinsights-web';
+import { OrderRecHashmap } from './orderStore';
 
 export function orderChangesListener(
   BASE_URL: string,
@@ -18,17 +20,21 @@ export function orderChangesListener(
   VENUE: string,
   authDataProvider: IConfiguredAuthDataProvider,
   //refreshTokenHandler: IRefreshTokenStorageHandler,
-  onOrderUpdatedCallback: Function,
-  _onAuthFailureCallback: Function,
+  onOrderUpdatedCallback: (
+    orderRec: IOrderRec | undefined,
+    orders: OrderRecHashmap,
+  ) => void,
+  _onAuthFailureCallback: () => Promise<void>,
   enableKDS: boolean,
   websocketMessageCallback?: (message: INotificationMessage) => void,
   onSteeringCommand?: (message: ISteeringCommand) => void,
   extra?: {
     appInsights?: ApplicationInsights;
     debugWs?: boolean;
+    onlyCompletedOrdersForUser?: boolean;
   },
 ): Promise<() => Promise<void>> {
-  const { appInsights, debugWs } = extra || {};
+  const { appInsights, debugWs, onlyCompletedOrdersForUser } = extra || {};
   return new Promise(async (resolve, reject) => {
     orderStore.setOrderStoreUpdatedCallback(onOrderUpdatedCallback);
     const params: listener.ConnectWebSocketsParams = {
@@ -42,16 +48,23 @@ export function orderChangesListener(
           appInsights?.trackTrace({ message: 'websocket connected async' });
         let orders;
         if (!enableKDS) {
-          //console.log('-- pull orders for user -- ');
-          orders = await orderService.pullOrdersForUser(BASE_URL, accessToken);
+          // pulls ONLY open orders
+          orders = await orderService.pullOrdersForUser(
+            BASE_URL,
+            accessToken,
+            onlyCompletedOrdersForUser,
+          );
         } else {
           // KDS version
-          //console.log('-- pull orders KDS -- ');
+          // pulls ONLY open orders
           orders = await orderService.pullOrders(BASE_URL, VENUE, accessToken);
         }
-        for (const order of orders) {
-          orderStore.onOrderUpdate(order, enableKDS, VENUE);
-        }
+        orderStore.onUpdateAllOrders(orders, enableKDS, VENUE, appInsights);
+
+        // for (const order of orders) {
+        //   // this leads to hanging orders on KDS, if order was closed during websocket offline it will never we removed from store
+        //   orderStore.onOrderUpdate(order, enableKDS, VENUE);
+        // }
       },
       onDisconnectAsync: async (): Promise<void> => {
         console.log('websocket disconnected');
