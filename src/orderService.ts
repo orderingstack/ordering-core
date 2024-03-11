@@ -1,11 +1,12 @@
 import axios from 'axios';
 import { EOrderLineStatus, IOrder } from './orderTypes';
-import {handleAPIError} from './apiTools'
+import { handleAPIError } from './apiTools';
 
 /**
-Pulls open orders for venue. Uses provided access token to authenticate to rest api.   
-* @param {*} venue - we pull orders for this venue  
-* @param {*} token - access token   
+ Pulls open orders for venue. Uses provided access token to authenticate to rest api.
+ * @param baseURL
+ * @param {*} venue - we pull orders for this venue
+ * @param {*} token - access token
  */
 export async function pullOrders(
   baseURL: string,
@@ -13,16 +14,16 @@ export async function pullOrders(
   token: string,
 ) {
   console.log('Pulling orders...');
-  const response = await axios({
-    method: 'get',
-    url: `${baseURL}/ordering-api/api/orders/venue/${venue}`,
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
-  }).catch(handleAPIError);
+  const response = await axios
+    .get<IOrder[]>(`${baseURL}/ordering-api/api/orders/venue/${venue}`, {
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+    })
+    .catch(handleAPIError);
   if (!response) return [];
-  const orders = [];
+  const orders: IOrder[] = [];
   for (const o of response.data) {
     if (o.completed) {
       orders.push(o);
@@ -32,23 +33,29 @@ export async function pullOrders(
 }
 
 /**
-Pulls open orders for the user. Uses provided access token to authenticate to rest api.   
-* @param {*} token - access token   
+ Pulls open orders for the user. Uses provided access token to authenticate to rest api.
+ * @param baseURL
+ * @param {*} token - access token
+ * @param onlyCompletedOrders - option to pull also not yet completed orders
  */
-export async function pullOrdersForUser(baseURL: string, token: string) {
-  console.log('Pulling orders for user...');
-  const response = await axios({
-    method: 'get',
-    url: `${baseURL}/ordering-api/api/orders/opened`,
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
-  }).catch(handleAPIError);
+export async function pullOrdersForUser(
+  baseURL: string,
+  token: string,
+  onlyCompletedOrders = true,
+) {
+  console.log('Pulling orders for user... only completed', onlyCompletedOrders);
+  const response = await axios
+    .get<IOrder[]>(`${baseURL}/ordering-api/api/orders/opened`, {
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+    })
+    .catch(handleAPIError);
   if (!response) return [];
-  const orders = [];
+  const orders: IOrder[] = [];
   for (const o of response.data) {
-    if (o.completed) {
+    if (!onlyCompletedOrders || o.completed) {
       orders.push(o);
     }
   }
@@ -187,5 +194,3 @@ export async function appendOrderLine(
   }).catch(handleAPIError);
   return response ? response.data : null;
 }
-
-

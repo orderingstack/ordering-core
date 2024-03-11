@@ -1,6 +1,6 @@
 {
   "name": "@orderingstack/ordering-core",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "description": "Ordering Stack client core library",
   "main": "./lib/cjs/index.js",
   "module": "./lib/esm/index.js",
@@ -12,7 +12,8 @@
     "tsc": "tsc -p tsconfig.json && tsc -p tsconfig-cjs.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "build": "tsc -p tsconfig.json && tsc -p tsconfig-cjs.json",
-    "test": "jest"
+    "test": "jest",
+    "prepublishOnly": "npm run build"
   },
   "author": "kolec",
   "license": "MIT",

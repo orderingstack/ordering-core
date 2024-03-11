@@ -5,6 +5,7 @@ import {
   IOrderRec,
   IOrderServerTool,
 } from './orderTypes';
+import { ApplicationInsights } from '@microsoft/applicationinsights-web';
 
 export interface OrderRecHashmap {
   [id: string]: IOrderRec;
@@ -13,7 +14,9 @@ export interface OrderRecHashmap {
 let orderRecords: OrderRecHashmap = {}; //TODO prune old orders
 let orderUpdateCallback: Function;
 
-export const setOrderStoreUpdatedCallback = (_callback: Function) => {
+export const setOrderStoreUpdatedCallback = (
+  _callback: (rec: IOrderRec | undefined, orders: OrderRecHashmap) => void,
+) => {
   orderUpdateCallback = _callback;
 };
 
@@ -39,15 +42,58 @@ export const cmdOrderCreate = async (
   return { id, correlationId };
 };
 
+export const onUpdateAllOrders = (
+  orders: IOrder[],
+  isKDS: boolean,
+  venueId: string,
+  appInsights?: ApplicationInsights,
+) => {
+  const orderIds = orders.map((order) => order.id);
+  const removed = Object.keys(orderRecords).filter(
+    (orderId) => !orderIds.includes(orderId),
+  );
+  for (const orderId of removed) {
+    delete orderRecords[orderId];
+  }
+  let updated = 0;
+  for (const o of orders) {
+    if (!orderRecords[o.id]) {
+      orderRecords[o.id] = {
+        order: o,
+        recStatus: EOrderRecStatus.VALID,
+        createOrderCorrelationId: '',
+      };
+      updated++;
+      onOrderUpdate(o, isKDS, venueId);
+    } else if (orderRecords[o.id]?.order?.lastChanged !== o.lastChanged) {
+      orderRecords[o.id].order = o;
+      updated++;
+      onOrderUpdate(o, isKDS, venueId);
+    }
+  }
+  if (removed.length > 0) {
+    console.log(`Removed ${removed.length} stale orders from store`);
+    appInsights?.trackTrace({
+      message: 'Removed staled orders from store',
+      properties: { count: removed.length },
+    });
+  }
+  updated > 0 && console.log(`Updated ${updated} stale orders in store`);
+
+  if (removed.length > 0 && orderUpdateCallback) {
+    orderUpdateCallback(undefined, orderRecords);
+  }
+};
+
 export const onOrderUpdate = (
-  orderData: any,
+  orderData: IOrder,
   isKDS: boolean,
   venueId: string,
 ) => {
   const id = orderData.id;
   if (!id) return;
   if (isKDS) {
-    const orderVenues: string[] = orderData.buckets?.map((b: any) => b.venue);
+    const orderVenues = orderData.buckets?.map((b) => b.venue);
     if (!orderVenues?.includes(venueId)) {
       return;
     }
@@ -58,7 +104,7 @@ export const onOrderUpdate = (
     // create new record
     orderRecords[id] = {
       recStatus: EOrderRecStatus.VALID,
-      order: toOrder(orderData),
+      order: orderData,
       createOrderCorrelationId: '',
     };
   } else {
@@ -67,7 +113,7 @@ export const onOrderUpdate = (
     if (rec.recStatus === EOrderRecStatus.INITIALIZING) {
       rec.recStatus = EOrderRecStatus.VALID;
     }
-    rec.order = toOrder(orderData);
+    rec.order = orderData;
     if (rec.order.closed) {
       //console.log('---------------------- CLOSED:  ' + id);
       delete orderRecords[id];
@@ -76,9 +122,9 @@ export const onOrderUpdate = (
     // ????
     //}
   }
-  // console.log(
-  //   `Order Store contains ${Object.keys(orderRecords).length} records`,
-  // );
+  console.log(
+    `Order Store contains ${Object.keys(orderRecords).length} records`,
+  );
   if (orderUpdateCallback) orderUpdateCallback(orderRecords[id], orderRecords);
 };
 
