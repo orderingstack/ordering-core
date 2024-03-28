@@ -8,10 +8,23 @@ import {
 } from './orderTypes';
 import { handleAPIError } from './apiTools';
 import { Mutex } from './utils/mutex';
+import { jwtDecode } from 'jwt-decode';
 
 let _authData: IAuthData | null = null;
-let tokenRetrieveTimeMs: number = -1;
 const mutex = new Mutex(250);
+
+interface ITokenData {
+  user_name: string;
+  scope: string[];
+  ati?: string;
+  MFA?: 'T' | 'F';
+  exp: number;
+  UUID: string;
+  TENANT: string;
+  authorities: string[];
+  jti?: string;
+  client_id: string;
+}
 
 export async function authorizeWithUserPass(
   baseUrl: string,
@@ -22,18 +35,18 @@ export async function authorizeWithUserPass(
 ): Promise<boolean> {
   let response = null;
   try {
-    response = await axios({
-      method: 'post',
-      url: `${baseUrl}/auth-oauth2/oauth/token`,
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
-        Authorization: `Basic ${basicAuthPass}`,
-        'X-Tenant': tenant,
+    response = await axios.post<IAuthData>(
+      `${baseUrl}/auth-oauth2/oauth/token`,
+      { username, password, grant_type: 'password', scope: 'read' },
+      {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+          Authorization: `Basic ${basicAuthPass}`,
+          'X-Tenant': tenant,
+        },
       },
-      data: `username=${username}&password=${password}&grant_type=password&scope=read`,
-    });
+    );
     _authData = response.data;
-    tokenRetrieveTimeMs = new Date().getTime();
     return true;
   } catch (error) {
     //console.error('Authorization error');
@@ -50,20 +63,19 @@ export async function authorizeWithRefreshToken(
 ): Promise<boolean> {
   let response = null;
   try {
-    const req: any = {
-      method: 'post',
-      url: `${baseUrl}/auth-oauth2/oauth/token`,
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
-        Authorization: `Basic ${basicAuthPass}`,
-        'X-Tenant': tenant,
+    response = await axios.post<IAuthData>(
+      `${baseUrl}/auth-oauth2/oauth/token`,
+      { refresh_token: refreshToken, grant_type: 'refresh_token' },
+      {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+          Authorization: `Basic ${basicAuthPass}`,
+          'X-Tenant': tenant,
+        },
       },
-      data: `refresh_token=${refreshToken}&grant_type=refresh_token`,
-    };
-    //console.log(req);
-    response = await axios(req);
+    );
     _authData = response.data;
-    tokenRetrieveTimeMs = new Date().getTime();
+    // console.log('authData', _authData);
     //console.log('REFRESH TOKEN AUTH RESULT ***');
     //console.log(_authData);
     return true;
@@ -74,17 +86,15 @@ export async function authorizeWithRefreshToken(
   }
 }
 
-function isTokenExpired(authData: IAuthData | null): boolean {
+export function isTokenExpired(token?: string) {
   // check if we can use current token
-  if (!authData || !authData.access_token) {
-    return true;
+  if (token) {
+    return (
+      // 10s before actual expiry
+      jwtDecode<ITokenData>(token).exp * 1000 < new Date().getTime() + 10000
+    );
   }
-
-  const secondsFromRetrievingExistingToken =
-    new Date().getTime() - tokenRetrieveTimeMs;
-  const expiryIfGreaterThan: number =
-    parseInt(authData.expires_in) * 1000 * 0.95; //miliseconds
-  return secondsFromRetrievingExistingToken >= expiryIfGreaterThan;
+  return true;
 }
 
 export const authDataProvider: IAuthDataProvider = async (
@@ -94,7 +104,7 @@ export const authDataProvider: IAuthDataProvider = async (
 ): Promise<{ token: string; UUID: string }> => {
   // console.log( `authDataProvider invoked ----     currentToken=${  _authData ? _authData.access_token : '(null)'   }`, );
   if (!forceRefresh && _authData && _authData.access_token) {
-    if (!isTokenExpired(_authData)) {
+    if (!isTokenExpired(_authData.access_token)) {
       return { token: _authData.access_token, UUID: _authData.UUID };
     }
   }
@@ -103,11 +113,11 @@ export const authDataProvider: IAuthDataProvider = async (
   const refreshToken = await refreshTokenStorageHandler.getRefreshToken(
     ctx.TENANT,
   );
-  if (refreshToken) {
+  if (refreshToken && !isTokenExpired(refreshToken)) {
     //console.log('*** AUTHORIZE WITH REFRESH TOKEN ');
     // use mutex to enforce max 1 api call at a time
     loginSuccess = await mutex.getLock<boolean>(() => {
-      if (_authData && !isTokenExpired(_authData)) {
+      if (_authData && !isTokenExpired(_authData.access_token)) {
         return Promise.resolve(true);
       }
       return authorizeWithRefreshToken(
@@ -117,9 +127,11 @@ export const authDataProvider: IAuthDataProvider = async (
         refreshToken,
       );
     });
+  } else if (refreshToken) {
+    refreshTokenStorageHandler.clearRefreshToken(ctx.TENANT);
   }
   if (!loginSuccess && ctx.anonymousAuth) {
-    //console.log('**** ANONYMOUS AUTH ****');
+    // console.log('**** ANONYMOUS AUTH ****');
     loginSuccess = await authorizeWithUserPass(
       ctx.BASE_URL,
       ctx.TENANT,
@@ -151,10 +163,8 @@ export function setAuthData(
   tenant: string,
   newAuthData: IAuthData,
   refreshTokenStorageHandler: IRefreshTokenStorageHandler,
-  newTokenRetrieveTimeMs: number = new Date().getTime(),
 ) {
   _authData = newAuthData;
-  tokenRetrieveTimeMs = newTokenRetrieveTimeMs;
   refreshTokenStorageHandler.setRefreshToken(tenant, _authData.refresh_token);
 }
 

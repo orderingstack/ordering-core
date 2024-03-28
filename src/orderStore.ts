@@ -80,7 +80,8 @@ export const onUpdateAllOrders = (
   }
   updated > 0 && console.log(`Updated ${updated} stale orders in store`);
 
-  if (removed.length > 0 && orderUpdateCallback) {
+  // update if any order has been removed OR orders are empty (e.g. initial update)
+  if ((removed.length > 0 || !orderIds.length) && orderUpdateCallback) {
     orderUpdateCallback(undefined, orderRecords);
   }
 };
