@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.1] - 2024-03-27
+- Fix
+  - access token expiry checking
+  - refresh token expiry checking
+  - orders update callback on empty orders
+
 ## [1.5.0] - 2024-03-08
 - Fix
   - Closed orders not removed from order store upon PULL
