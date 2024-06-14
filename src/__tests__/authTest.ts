@@ -1,8 +1,7 @@
 import * as auth from '../auth';
 import { server } from '../__mocks__/server';
-import { rest, restContext } from 'msw';
+import { rest } from 'msw';
 import querystring from 'querystring';
-// import { mockDate } from '../__mocks__/mockDate';
 import { getLoggedUserData, isTokenExpired, updateUserData } from '../auth';
 import { IRefreshTokenStorageHandler } from '../orderTypes';
 import jwt from 'jsonwebtoken';
@@ -95,6 +94,58 @@ test('getAuthData - makes 10 API calls with multiple concurrent request if netwo
   expect(dispatchRequest).toHaveBeenCalledTimes(10);
 });
 
+test('getAuthData - makes max 1 API call with same refresh_token if response is 4XX', async () => {
+  server.use(
+    rest.post(authUrl, (req, res, ctx) => {
+      return res(ctx.status(400), ctx.json({ error: 'Invalid grant' }));
+    }),
+  );
+  const dispatchRequest = jest.fn();
+  server.events.on('request:start', dispatchRequest);
+  const tokenProvider: IRefreshTokenStorageHandler = {
+    getRefreshToken: jest
+      .fn()
+      .mockResolvedValue(goodAuthResponseBody.refresh_token),
+    setRefreshToken: jest.fn().mockResolvedValue(undefined),
+    clearRefreshToken: jest.fn().mockResolvedValue(undefined),
+  };
+  // Clear _authData from other tests
+  auth.clearAuthData('any_tenant', tokenProvider);
+  const results = await Promise.all(
+    Array(10)
+      .fill(0)
+      .map(() => auth.authDataProvider(testData, tokenProvider)),
+  );
+  expect(results.every((result) => result.token === '')).toBe(true);
+  expect(dispatchRequest).toHaveBeenCalledTimes(1);
+});
+
+test('getAuthData - makes 10 API calls with same refresh_token if response is 5XX', async () => {
+  server.use(
+    rest.post(authUrl, (req, res, ctx) => {
+      return res(ctx.status(500), ctx.json({ error: 'Internal error' }));
+    }),
+  );
+  const dispatchRequest = jest.fn();
+  server.events.on('request:start', dispatchRequest);
+  const tokenProvider: IRefreshTokenStorageHandler = {
+    getRefreshToken: jest
+      .fn()
+      .mockResolvedValue(goodAuthResponseBody.refresh_token),
+    setRefreshToken: jest.fn().mockResolvedValue(undefined),
+    clearRefreshToken: jest.fn().mockResolvedValue(undefined),
+  };
+  // Clear _authData from other tests
+  auth.clearAuthData('any_tenant', tokenProvider);
+  const results = await Promise.all(
+    Array(10)
+      .fill(0)
+      .map(() => auth.authDataProvider(testData, tokenProvider)),
+  );
+  expect(results.every((result) => result.token === '')).toBe(true);
+  expect(dispatchRequest).toHaveBeenCalledTimes(10);
+});
+
 test('getTokenWithRefreshToken - wrong token', async () => {
   const authSuccess = await auth.authorizeWithRefreshToken(
     testData.BASE_URL,
@@ -147,7 +198,7 @@ test('getAuthData - return existing token if it is still valid ', async () => {
   expect(token).toBe(validToken);
 });
 
-test('getAuthData - clears refresh token if expired and does NOT call oauth2 api', async () => {
+test('getAuthData - clears refresh token if JWT expired and does NOT call oauth2 api', async () => {
   const expiredToken = jwt.sign(
     {
       exp: dayjs().subtract(1, 'second').unix(),
@@ -189,6 +240,45 @@ test('getAuthData - clears refresh token if expired and does NOT call oauth2 api
   expect(clearRefreshToken).toHaveBeenCalledTimes(1);
   expect(clearRefreshToken).toHaveBeenCalledWith(testData.TENANT);
   expect(dispatchRequest).toHaveBeenCalledTimes(0);
+});
+
+test('getAuthData - does call oauth2 api clears refresh token if refresh_token is not a JWT token', async () => {
+  const nonJwtToken = 'non-jwt-token';
+  const clearRefreshToken = jest.fn();
+  const dispatchRequest = jest.fn();
+  server.events.on('request:start', dispatchRequest);
+  const refreshHandler = {
+    getRefreshToken: (tenant: string) => nonJwtToken,
+    setRefreshToken: (tenant: string) => {},
+    clearRefreshToken: clearRefreshToken,
+  };
+  const ctx = {
+    BASE_URL: testData.BASE_URL,
+    TENANT: testData.TENANT,
+    BASIC_AUTH: testData.BASIC_AUTH,
+    anonymousAuth: false,
+  };
+
+  auth.setAuthData(
+    testData.TENANT,
+    {
+      expires_in: '3600',
+      access_token: nonJwtToken,
+      UUID: 'user1',
+      refresh_token: nonJwtToken,
+    },
+    refreshHandler,
+  );
+  const { token, UUID } = await auth.authDataProvider(
+    ctx,
+    refreshHandler,
+    false,
+  );
+  expect(token).toBe('');
+  expect(UUID).toBe('');
+  expect(clearRefreshToken).toHaveBeenCalledTimes(1);
+  expect(clearRefreshToken).toHaveBeenCalledWith(testData.TENANT);
+  expect(dispatchRequest).toHaveBeenCalledTimes(1);
 });
 
 test('getAuthData - use refresh token to retrieve new token if existing token expired', async () => {
@@ -431,5 +521,10 @@ describe('token expiry function', () => {
         ),
       ),
     ).toBe(false);
+  });
+
+  test('return expired for non JWT token without throwing', () => {
+    expect(isTokenExpired('non-jwt-access-token')).toBe(true);
+    expect(() => isTokenExpired('non-jwt-access-token')).not.toThrowError();
   });
 });
