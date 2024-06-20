@@ -1,6 +1,6 @@
 {
   "name": "@orderingstack/ordering-core",
-  "version": "1.6.0",
+  "version": "1.6.1",
   "description": "Ordering Stack client core library",
   "main": "./lib/cjs/index.js",
   "module": "./lib/esm/index.js",
@@ -14,6 +14,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "build": "tsc -p tsconfig-build.json && tsc -p tsconfig-cjs.json",
     "test": "jest",
+    "test:cov": "jest --coverage",
     "prepublishOnly": "npm run build"
   },
   "author": "kolec",
@@ -23,7 +24,7 @@
     "axios": "^1.7.2",
     "jwt-decode": "^4.0.0",
     "text-encoding": "^0.7.0",
-    "ws": "^7.3.1"
+    "ws": "^7.5.10"
   },
   "devDependencies": {
     "@microsoft/applicationinsights-web": "^3.1.0",
@@ -42,7 +43,7 @@
     "typescript": "^5.4.3"
   },
   "resolutions": {
-    "semver": "^6.3.1",
+    "semver": "^7.6.2",
     "@babel/traverse": "^7.23.2"
   }
 }
