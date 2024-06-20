@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios, { isAxiosError } from 'axios';
 import {
   IAuthData,
   IAuthDataProvider,
@@ -12,6 +12,7 @@ import { jwtDecode } from 'jwt-decode';
 
 let _authData: IAuthData | null = null;
 const mutex = new Mutex(250);
+const invalidRefreshTokens = new Map<string, number>();
 
 interface ITokenData {
   user_name: string;
@@ -24,6 +25,13 @@ interface ITokenData {
   authorities: string[];
   jti?: string;
   client_id: string;
+}
+
+export function purgeTokenCache(): void {
+  const keys = invalidRefreshTokens.keys();
+  for (const key of keys) {
+    invalidRefreshTokens.delete(key);
+  }
 }
 
 export async function authorizeWithUserPass(
@@ -79,9 +87,12 @@ export async function authorizeWithRefreshToken(
     //console.log('REFRESH TOKEN AUTH RESULT ***');
     //console.log(_authData);
     return true;
-  } catch (error) {
+  } catch (error: any) {
+    if (isAxiosError(error) && /^4\d{2}$/.test(`${error.response?.status}`)) {
+      invalidRefreshTokens.set(refreshToken, Date.now());
+    }
     //console.error('Authorization error');
-    //console.error(error)
+    // console.error(error);
     return false;
   }
 }
@@ -89,12 +100,26 @@ export async function authorizeWithRefreshToken(
 export function isTokenExpired(token?: string) {
   // check if we can use current token
   if (token) {
-    return (
-      // 10s before actual expiry
-      jwtDecode<ITokenData>(token).exp * 1000 < new Date().getTime() + 10000
-    );
+    try {
+      return (
+        // 10s before actual expiry
+        jwtDecode<ITokenData>(token).exp * 1000 < new Date().getTime() + 10000
+      );
+    } catch (error) {
+      // Not a JWT token
+      return true;
+    }
   }
   return true;
+}
+
+function isJwtToken(token: string) {
+  try {
+    jwtDecode<ITokenData>(token);
+    return true;
+  } catch (error) {
+    return false;
+  }
 }
 
 export const authDataProvider: IAuthDataProvider = async (
@@ -113,12 +138,20 @@ export const authDataProvider: IAuthDataProvider = async (
   const refreshToken = await refreshTokenStorageHandler.getRefreshToken(
     ctx.TENANT,
   );
-  if (refreshToken && !isTokenExpired(refreshToken)) {
+  if (
+    refreshToken &&
+    (!isJwtToken(refreshToken) || !isTokenExpired(refreshToken))
+  ) {
     //console.log('*** AUTHORIZE WITH REFRESH TOKEN ');
     // use mutex to enforce max 1 api call at a time
     loginSuccess = await mutex.getLock<boolean>(() => {
       if (_authData && !isTokenExpired(_authData.access_token)) {
         return Promise.resolve(true);
+      }
+      // If same refresh token was invalid less then 30s ago skip api call
+      const invalidTokenTimestamp = invalidRefreshTokens.get(refreshToken);
+      if (invalidTokenTimestamp && Date.now() < invalidTokenTimestamp + 30000) {
+        return Promise.resolve(false);
       }
       return authorizeWithRefreshToken(
         ctx.BASE_URL,
@@ -127,8 +160,6 @@ export const authDataProvider: IAuthDataProvider = async (
         refreshToken,
       );
     });
-  } else if (refreshToken) {
-    refreshTokenStorageHandler.clearRefreshToken(ctx.TENANT);
   }
   if (!loginSuccess && ctx.anonymousAuth) {
     // console.log('**** ANONYMOUS AUTH ****');
@@ -141,6 +172,7 @@ export const authDataProvider: IAuthDataProvider = async (
     );
   }
   if (!loginSuccess || !_authData) {
+    refreshTokenStorageHandler.clearRefreshToken(ctx.TENANT);
     return { token: '', UUID: '' };
   } else {
     refreshTokenStorageHandler.setRefreshToken(
