@@ -29,13 +29,13 @@ test('getTokenWithPassword', async () => {
 });
 
 test('getTokenWithRefreshToken', async () => {
-  const authSuccess = await auth.authorizeWithRefreshToken(
+  const { success } = await auth.authorizeWithRefreshToken(
     testData.BASE_URL,
     testData.TENANT,
     testData.BASIC_AUTH,
     goodAuthResponseBody.refresh_token,
   );
-  expect(authSuccess).toBe(true);
+  expect(success).toBe(true);
 });
 
 test('getAuthData - makes only 1 API call with multiple concurrent request for access_token having refresh_token', async () => {
@@ -54,7 +54,7 @@ test('getAuthData - makes only 1 API call with multiple concurrent request for a
     clearRefreshToken: jest.fn().mockResolvedValue(undefined),
   };
   // Clear _authData from other tests
-  auth.clearAuthData('any_tenant', tokenProvider);
+  auth.clearAuthData(testData.TENANT, tokenProvider);
   const results = await Promise.all(
     Array(10)
       .fill(0)
@@ -84,7 +84,7 @@ test('getAuthData - makes 10 API calls with multiple concurrent request if netwo
     clearRefreshToken: jest.fn().mockResolvedValue(undefined),
   };
   // Clear _authData from other tests
-  auth.clearAuthData('any_tenant', tokenProvider);
+  auth.clearAuthData(testData.TENANT, tokenProvider);
   const results = await Promise.all(
     Array(10)
       .fill(0)
@@ -110,7 +110,7 @@ test('getAuthData - makes max 1 API call with same refresh_token if response is 
     clearRefreshToken: jest.fn().mockResolvedValue(undefined),
   };
   // Clear _authData from other tests
-  auth.clearAuthData('any_tenant', tokenProvider);
+  auth.clearAuthData(testData.TENANT, tokenProvider);
   const results = await Promise.all(
     Array(10)
       .fill(0)
@@ -136,7 +136,7 @@ test('getAuthData - makes 10 API calls with same refresh_token if response is 5X
     clearRefreshToken: jest.fn().mockResolvedValue(undefined),
   };
   // Clear _authData from other tests
-  auth.clearAuthData('any_tenant', tokenProvider);
+  auth.clearAuthData(testData.TENANT, tokenProvider);
   const results = await Promise.all(
     Array(10)
       .fill(0)
@@ -147,18 +147,18 @@ test('getAuthData - makes 10 API calls with same refresh_token if response is 5X
 });
 
 test('getTokenWithRefreshToken - wrong token', async () => {
-  const authSuccess = await auth.authorizeWithRefreshToken(
+  const { success } = await auth.authorizeWithRefreshToken(
     testData.BASE_URL,
     testData.TENANT,
     testData.BASIC_AUTH,
     'invalid_token',
   );
-  expect(authSuccess).toBe(false);
+  expect(success).toBe(false);
 });
 
 const authUrl = `${testData.BASE_URL}/auth-oauth2/oauth/token`;
 
-test('getAuthData - return existing token if it is still valid ', async () => {
+test('getAuthData - return existing access token if it is still valid ', async () => {
   const validToken = jwt.sign(
     {
       exp: dayjs().add(20, 'second').unix(),
@@ -179,9 +179,8 @@ test('getAuthData - return existing token if it is still valid ', async () => {
     BASIC_AUTH: testData.BASIC_AUTH,
     anonymousAuth: true,
   };
-
   auth.setAuthData(
-    'tenant1',
+    testData.TENANT,
     {
       expires_in: '3600',
       access_token: validToken,
@@ -242,7 +241,12 @@ test('getAuthData - clears refresh token if JWT expired and does NOT call oauth2
   expect(dispatchRequest).toHaveBeenCalledTimes(0);
 });
 
-test('getAuthData - does call oauth2 api clears refresh token if refresh_token is not a JWT token', async () => {
+test('getAuthData - does call oauth2 api clears refresh token if refresh_token is not a JWT token and response is 400 invalid_grant', async () => {
+  server.use(
+    rest.post(authUrl, (req, res, ctx) => {
+      return res(ctx.status(400), ctx.json({ error: 'invalid_grant' }));
+    }),
+  );
   const nonJwtToken = 'non-jwt-token';
   const clearRefreshToken = jest.fn();
   const dispatchRequest = jest.fn();

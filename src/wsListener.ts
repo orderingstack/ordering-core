@@ -44,6 +44,33 @@ export async function connectWebSockets(
   let client: StompJs.Client;
   const baseURL = replaceProtocolInUrl(params.baseURL, 'wss://') + '/websocket';
   let userUUID: string = '';
+  async function awaitAccessToken() {
+    let token = '';
+    let tries = 0;
+    while (!token) {
+      // ordering-core returns token="" when no token available!
+      const data = await params.authDataProvider();
+      token = data.token;
+      userUUID = data.UUID;
+
+      if (!token) {
+        tries++;
+        console.warn('WS no token. Exponential backoff');
+        appInsights?.trackTrace(
+          {
+            message: 'websocket no token. Exponential backoff',
+          },
+          { tries, venue: params.venue },
+        );
+        // exponential backoff
+        await new Promise((resolve) =>
+          setTimeout(resolve, 1000 * Math.min(Math.pow(2, tries), 30)),
+        );
+      }
+    }
+    return token;
+  }
+
   const stompConfig: StompJs.StompConfig = {
     brokerURL: baseURL,
     debug: function (a: any) {
@@ -57,47 +84,15 @@ export async function connectWebSockets(
       console.log('--- beforeConnect --- ');
       debugWs &&
         appInsights?.trackTrace({ message: 'websocket beforeConnect' });
-      let token = '';
-      let UUID = '';
-      let tries = 0;
-      while (!token && tries <= 8) {
-        const data = await params
-          .authDataProvider
-          // baseURL,
-          // params.refreshTokenHandler,
-          // false,
-          ();
-        token = data.token;
-        UUID = data.UUID;
-
-        // exponential backoff
-        !token && tries++;
-        !token && console.warn('WS no token. Exponential backoff');
-        !token &&
-          debugWs &&
-          appInsights?.trackTrace({
-            message: 'websocket no token. Exponential backoff',
-          });
-        !token &&
-          (await new Promise((resolve) =>
-            setTimeout(resolve, 1000 * Math.pow(2, tries)),
-          ));
-      }
-      if (!token) {
-        appInsights?.trackTrace({
-          message:
-            'websocket Access token provider error - deactivating socket',
-        });
-        console.error('Access token provider error - deactivating socket');
-        client.deactivate();
-        if (params.onAuthFailure) params.onAuthFailure();
-      }
+      const token = await awaitAccessToken();
       stompConfig.connectHeaders = { login: token /*passcode: ''*/ };
-      userUUID = UUID;
     },
 
     onConnect: async function () {
-      if (!stompConfig.connectHeaders) return;
+      if (!stompConfig.connectHeaders) {
+        console.warn('No connect headers');
+        return;
+      }
       const accessToken = stompConfig.connectHeaders.login;
       await params.onConnectedAsync(accessToken);
       console.log('Websocket connected.');
@@ -191,13 +186,8 @@ export async function connectWebSockets(
   };
 
   try {
-    // const { token, UUID } = await params
-    //   .authDataProvider
-    //   // params.baseURL,
-    //   // params.refreshTokenHandler,
-    //   // false,
-    //   ();
-    // stompConfig.connectHeaders = { login: token /*passcode: ''*/ };
+    const token = await awaitAccessToken();
+    stompConfig.connectHeaders = { login: token /*passcode: ''*/ };
     client = createNewClient(stompConfig);
     client.activate();
     return async () => {
