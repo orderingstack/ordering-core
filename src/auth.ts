@@ -2,15 +2,15 @@ import axios, { isAxiosError } from 'axios';
 import {
   IAuthData,
   IAuthDataProvider,
-  IConfiguredAuthDataProvider,
   IEditableUserData,
   IRefreshTokenStorageHandler,
 } from './orderTypes';
 import { handleAPIError } from './apiTools';
 import { Mutex } from './utils/mutex';
 import { jwtDecode } from 'jwt-decode';
+import { EventEmitter } from 'my-events';
 
-let _authData: IAuthData | null = null;
+const _authDataMap: Map<string, IAuthData> = new Map();
 const mutex = new Mutex(250);
 const invalidRefreshTokens = new Map<string, number>();
 
@@ -26,6 +26,16 @@ interface ITokenData {
   jti?: string;
   client_id: string;
 }
+
+class TokenExpirationEmitter extends EventEmitter {
+  constructor() {
+    super();
+  }
+  public notify(tenant: string, error: any) {
+    this.emit(`refreshTokenInvalid-${tenant}`, error);
+  }
+}
+const RefreshTokenNotifier = new TokenExpirationEmitter();
 
 export function purgeTokenCache(): void {
   const keys = invalidRefreshTokens.keys();
@@ -54,7 +64,7 @@ export async function authorizeWithUserPass(
         },
       },
     );
-    _authData = response.data;
+    _authDataMap.set(tenant, response.data);
     return true;
   } catch (error) {
     //console.error('Authorization error');
@@ -68,7 +78,10 @@ export async function authorizeWithRefreshToken(
   tenant: string,
   basicAuthPass: string,
   refreshToken: string,
-): Promise<boolean> {
+): Promise<
+  | { success: true; removeToken?: undefined }
+  | { success: false; removeToken: boolean }
+> {
   let response = null;
   try {
     response = await axios.post<IAuthData>(
@@ -82,18 +95,24 @@ export async function authorizeWithRefreshToken(
         },
       },
     );
-    _authData = response.data;
+    _authDataMap.set(tenant, response.data);
     // console.log('authData', _authData);
     //console.log('REFRESH TOKEN AUTH RESULT ***');
     //console.log(_authData);
-    return true;
+    return { success: true };
   } catch (error: any) {
     if (isAxiosError(error) && /^4\d{2}$/.test(`${error.response?.status}`)) {
       invalidRefreshTokens.set(refreshToken, Date.now());
+      if (error.response?.data?.error === 'invalid_grant') {
+        console.warn('invalid_grant', tenant);
+        RefreshTokenNotifier.notify(tenant, error);
+        // token invalid or expired, remove it
+        return { success: false, removeToken: true };
+      }
     }
     //console.error('Authorization error');
     // console.error(error);
-    return false;
+    return { success: false, removeToken: false };
   }
 }
 
@@ -128,9 +147,13 @@ export const authDataProvider: IAuthDataProvider = async (
   forceRefresh = false,
 ): Promise<{ token: string; UUID: string }> => {
   // console.log( `authDataProvider invoked ----     currentToken=${  _authData ? _authData.access_token : '(null)'   }`, );
-  if (!forceRefresh && _authData && _authData.access_token) {
-    if (!isTokenExpired(_authData.access_token)) {
-      return { token: _authData.access_token, UUID: _authData.UUID };
+  let authData = _authDataMap.get(ctx.TENANT);
+  if (!forceRefresh && authData && authData.access_token) {
+    // console.log('auth data has access token');
+    if (!isTokenExpired(authData.access_token)) {
+      return { token: authData.access_token, UUID: authData.UUID };
+    } else {
+      console.log('access token is expired');
     }
   }
   //console.log('******** GET AUTH TOKEN (REMOTE CALL) ********');
@@ -138,20 +161,27 @@ export const authDataProvider: IAuthDataProvider = async (
   const refreshToken = await refreshTokenStorageHandler.getRefreshToken(
     ctx.TENANT,
   );
+  console.log('have refresh token?', !!refreshToken, 'tenant', ctx.TENANT);
+  if (isJwtToken(refreshToken) && isTokenExpired(refreshToken)) {
+    refreshTokenStorageHandler.clearRefreshToken(ctx.TENANT);
+  }
   if (
     refreshToken &&
     (!isJwtToken(refreshToken) || !isTokenExpired(refreshToken))
   ) {
     //console.log('*** AUTHORIZE WITH REFRESH TOKEN ');
     // use mutex to enforce max 1 api call at a time
-    loginSuccess = await mutex.getLock<boolean>(() => {
-      if (_authData && !isTokenExpired(_authData.access_token)) {
-        return Promise.resolve(true);
+    const result = await mutex.getLock<
+      Awaited<ReturnType<typeof authorizeWithRefreshToken>>
+    >(() => {
+      authData = _authDataMap.get(ctx.TENANT);
+      if (authData && !isTokenExpired(authData.access_token)) {
+        return Promise.resolve({ success: true });
       }
       // If same refresh token was invalid less then 30s ago skip api call
       const invalidTokenTimestamp = invalidRefreshTokens.get(refreshToken);
       if (invalidTokenTimestamp && Date.now() < invalidTokenTimestamp + 30000) {
-        return Promise.resolve(false);
+        return Promise.resolve({ success: false, removeToken: false });
       }
       return authorizeWithRefreshToken(
         ctx.BASE_URL,
@@ -160,6 +190,10 @@ export const authDataProvider: IAuthDataProvider = async (
         refreshToken,
       );
     });
+    loginSuccess = result.success;
+    if (result.removeToken) {
+      await refreshTokenStorageHandler.clearRefreshToken(ctx.TENANT);
+    }
   }
   if (!loginSuccess && ctx.anonymousAuth) {
     // console.log('**** ANONYMOUS AUTH ****');
@@ -171,23 +205,27 @@ export const authDataProvider: IAuthDataProvider = async (
       '',
     );
   }
-  if (!loginSuccess || !_authData) {
-    refreshTokenStorageHandler.clearRefreshToken(ctx.TENANT);
+  authData = _authDataMap.get(ctx.TENANT);
+  if (!loginSuccess || !authData) {
     return { token: '', UUID: '' };
   } else {
     refreshTokenStorageHandler.setRefreshToken(
       ctx.TENANT,
-      _authData.refresh_token,
+      authData.refresh_token,
     );
-    return { token: _authData.access_token, UUID: _authData.UUID };
+    return { token: authData.access_token, UUID: authData.UUID };
   }
 };
 
 export function createAuthDataProvider(
   ctx: any,
-  refreshTokenProvider: any,
+  refreshTokenProvider: IRefreshTokenStorageHandler,
   forceRefresh = false,
-): IConfiguredAuthDataProvider {
+  refreshTokenErrorCallback?: (error: any) => void,
+) {
+  RefreshTokenNotifier.on(`refreshTokenInvalid-${ctx.TENANT}`, (error: any) => {
+    refreshTokenErrorCallback?.(error);
+  });
   return () => authDataProvider(ctx, refreshTokenProvider, forceRefresh);
 }
 
@@ -196,8 +234,8 @@ export function setAuthData(
   newAuthData: IAuthData,
   refreshTokenStorageHandler: IRefreshTokenStorageHandler,
 ) {
-  _authData = newAuthData;
-  refreshTokenStorageHandler.setRefreshToken(tenant, _authData.refresh_token);
+  _authDataMap.set(tenant, newAuthData);
+  refreshTokenStorageHandler.setRefreshToken(tenant, newAuthData.refresh_token);
 }
 
 export function clearAuthData(
@@ -205,7 +243,7 @@ export function clearAuthData(
   refreshTokenStorageHandler: IRefreshTokenStorageHandler,
 ) {
   refreshTokenStorageHandler.clearRefreshToken(tenant);
-  _authData = null;
+  _authDataMap.delete(tenant);
 }
 
 export async function getLoggedUserData(baseURL: string, token: string) {
