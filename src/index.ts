@@ -10,7 +10,7 @@ export {
   IOrderRec,
   IOrderServerTool,
   IProductLiterals,
-  IAuthData, 
+  IAuthData,
   IAuthDataProvider,
   IExtra,
   IRefreshTokenStorageHandler,
@@ -22,7 +22,7 @@ export {
   EOrderSource,
   EOrderPaymentType,
   EOrderProductKind,
-  EOrderLineStatus
+  EOrderLineStatus,
 } from './orderTypes';
 export {
   postNewOrder,
@@ -51,7 +51,8 @@ export {
   clearAuthData,
   getLoggedUserData,
   updateUserData,
-  deleteUser
+  deleteUser,
+  getModuleConfig,
 } from './auth';
 export { ConnectWebSocketsParams, connectWebSockets } from './wsListener';
 export { orderChangesListener } from './mainService';

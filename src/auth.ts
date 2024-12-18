@@ -4,13 +4,16 @@ import {
   IAuthDataProvider,
   IEditableUserData,
   IRefreshTokenStorageHandler,
+  ModuleConfig,
 } from './orderTypes';
 import { handleAPIError } from './apiTools';
 import { Mutex } from './utils/mutex';
 import { jwtDecode } from 'jwt-decode';
 import { EventEmitter } from 'my-events';
+import isEqual from 'lodash/isEqual';
 
 const _authDataMap: Map<string, IAuthData> = new Map();
+const _moduleConfigMap: Map<string, ModuleConfig> = new Map();
 const mutex = new Mutex(250);
 const invalidRefreshTokens = new Map<string, number>();
 
@@ -73,11 +76,45 @@ export async function authorizeWithUserPass(
   }
 }
 
+/**
+ * Gets module config only if given accessToken is for a module, otherwise returns undefined
+ * @param baseUrl
+ * @param accessToken
+ */
+export async function getModuleConfig(baseUrl: string, accessToken: string) {
+  try {
+    const tokenData = jwtDecode<{
+      MODULE?: string;
+      iss: string;
+      exp: number;
+      UUID: string;
+      TENANT: string;
+      jti: string;
+      authorities: string[];
+    }>(accessToken);
+    if (tokenData.MODULE) {
+      const { data } = await axios.get<ModuleConfig>(
+        `${baseUrl}/auth-api/api/module-config`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        },
+      );
+      return data;
+    }
+  } catch (e) {
+    console.warn('get module config failed', e);
+    return undefined;
+  }
+}
+
 export async function authorizeWithRefreshToken(
   baseUrl: string,
   tenant: string,
   basicAuthPass: string,
   refreshToken: string,
+  moduleConfigCallback?: (moduleConfig: ModuleConfig) => void,
 ): Promise<
   | { success: true; removeToken?: undefined }
   | { success: false; removeToken: boolean }
@@ -96,6 +133,26 @@ export async function authorizeWithRefreshToken(
       },
     );
     _authDataMap.set(tenant, response.data);
+    // if module get & refresh module config
+    void getModuleConfig(baseUrl, response.data.access_token).then(
+      (moduleConfig) => {
+        if (!moduleConfig) return;
+        const id = `${tenant}-${moduleConfig.id}`;
+        const current = _moduleConfigMap.get(id);
+        _moduleConfigMap.set(id, moduleConfig);
+        if (!current || !isEqual(current, moduleConfig)) {
+          // update via callback if has changed
+          console.log(
+            'module config changed prev',
+            current,
+            'new',
+            moduleConfig,
+          );
+          moduleConfigCallback?.(moduleConfig);
+        }
+      },
+    );
+
     // console.log('authData', _authData);
     //console.log('REFRESH TOKEN AUTH RESULT ***');
     //console.log(_authData);
@@ -145,6 +202,7 @@ export const authDataProvider: IAuthDataProvider = async (
   ctx: any,
   refreshTokenStorageHandler,
   forceRefresh = false,
+  moduleConfigCallback?: (moduleConfig: ModuleConfig) => void,
 ): Promise<{ token: string; UUID: string }> => {
   // console.log( `authDataProvider invoked ----     currentToken=${  _authData ? _authData.access_token : '(null)'   }`, );
   let authData = _authDataMap.get(ctx.TENANT);
@@ -188,6 +246,7 @@ export const authDataProvider: IAuthDataProvider = async (
         ctx.TENANT,
         ctx.BASIC_AUTH,
         refreshToken,
+        moduleConfigCallback,
       );
     });
     loginSuccess = result.success;
@@ -222,11 +281,18 @@ export function createAuthDataProvider(
   refreshTokenProvider: IRefreshTokenStorageHandler,
   forceRefresh = false,
   refreshTokenErrorCallback?: (error: any) => void,
+  moduleConfigCallback?: (moduleConfig: ModuleConfig) => void,
 ) {
   RefreshTokenNotifier.on(`refreshTokenInvalid-${ctx.TENANT}`, (error: any) => {
     refreshTokenErrorCallback?.(error);
   });
-  return () => authDataProvider(ctx, refreshTokenProvider, forceRefresh);
+  return () =>
+    authDataProvider(
+      ctx,
+      refreshTokenProvider,
+      forceRefresh,
+      moduleConfigCallback,
+    );
 }
 
 export function setAuthData(
