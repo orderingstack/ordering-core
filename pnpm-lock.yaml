@@ -9,6 +9,7 @@ overrides:
   '@babel/traverse': ^7.23.2
   micromatch: ^4.0.8
   cookie: ^0.7.0
+  cross-spawn@>=7.0.0 <7.0.5: ^7.0.5
 
 importers:
 
@@ -18,11 +19,14 @@ importers:
         specifier: 6.1.2
         version: 6.1.2
       axios:
-        specifier: ^1.7.7
-        version: 1.7.7
+        specifier: ^1.7.9
+        version: 1.7.9
       jwt-decode:
         specifier: ^4.0.0
         version: 4.0.0
+      lodash:
+        specifier: ^4.17.21
+        version: 4.17.21
       my-events:
         specifier: npm:events@^3.3.0
         version: events@3.3.0
@@ -37,14 +41,17 @@ importers:
         specifier: ^3.1.0
         version: 3.2.2(tslib@2.6.3)
       '@orderingstack/ordering-types':
-        specifier: ^1.21.0
-        version: 1.26.1
+        specifier: ^1.27.1
+        version: 1.27.1
       '@types/jest':
         specifier: ^29.5.7
         version: 29.5.12
       '@types/jsonwebtoken':
         specifier: ^9.0.6
         version: 9.0.6
+      '@types/lodash':
+        specifier: ^4.17.13
+        version: 4.17.13
       '@types/my-events':
         specifier: npm:@types/events
         version: '@types/events@3.0.3'
@@ -407,8 +414,8 @@ packages:
   '@open-draft/until@1.0.3':
     resolution: {integrity: sha512-Aq58f5HiWdyDlFffbbSjAlv596h/cOnt2DO1w3DOC7OJ5EHs0hd/nycJfiu9RJbT6Yk6F1knnRRXNSpxoIVZ9Q==}
 
-  '@orderingstack/ordering-types@1.26.1':
-    resolution: {integrity: sha512-skEy7HUWVfR5dWKy+B+mmxQZIXrN0bQcL9nAnFqgC5lzRWCehYCYfnEdNhCVptRT7yNvfJfz4MD3C6hnxKwVnA==}
+  '@orderingstack/ordering-types@1.27.1':
+    resolution: {integrity: sha512-FIwQJMcIAUKTa5iseGdecAMFI6Vs1Kin4a2yf+L0nfgkozPBJ/GjDpXnk3xinLrDKjjacBzFWrZNgzlfOdSskg==}
 
   '@sinclair/typebox@0.27.8':
     resolution: {integrity: sha512-+Fj43pSMwJs4KRrH/938Uf+uAELIgVBmQzg/q1YG10djyfA3TnrU8N8XzqCh/okZdszqBQTZf96idMfE5lnwTA==}
@@ -463,6 +470,9 @@ packages:
 
   '@types/jsonwebtoken@9.0.6':
     resolution: {integrity: sha512-/5hndP5dCjloafCXns6SZyESp3Ldq7YjH3zwzwczYnjxIT0Fqzk5ROSYVGfFyczIue7IUEj8hkvLbPoLQ18vQw==}
+
+  '@types/lodash@4.17.13':
+    resolution: {integrity: sha512-lfx+dftrEZcdBPczf9d0Qv0x+j/rfNCMuC6OcfXmO8gkfeNAY88PgKUbvG56whcN23gc27yenwF6oJZXGFpYxg==}
 
   '@types/ms@0.7.34':
     resolution: {integrity: sha512-nG96G3Wp6acyAgJqGasjODb+acrI7KltPiRxzHPXnP3NgI28bpQDRv53olbqGXbfcgF5aiiHmO3xpwEpS5Ld9g==}
@@ -526,8 +536,8 @@ packages:
     resolution: {integrity: sha512-wvUjBtSGN7+7SjNpq/9M2Tg350UZD3q62IFZLbRAR1bSMlCo1ZaeW+BJ+D090e4hIIZLBcTDWe4Mh4jvUDajzQ==}
     engines: {node: '>= 0.4'}
 
-  axios@1.7.7:
-    resolution: {integrity: sha512-S4kL7XrjgBmvdGut0sN3yJxqYzrDOnivkBiN0OFs6hLiUam3UPvswUo0kqGyhqUZGEOytHyumEdXsAkgCOUf3Q==}
+  axios@1.7.9:
+    resolution: {integrity: sha512-LhLcE7Hbiryz8oMDdDptSrWowmB4Bl6RCt6sIJKpRB4XtVf0iEgewX3au/pJqm+Py1kCASkb/FFKjxQaLtxJvw==}
 
   babel-jest@29.7.0:
     resolution: {integrity: sha512-BrvGY3xZSwEcCzKvKsCi2GgHqDqsYkOP4/by5xCgIwGXQxIEh+8ew3gmrE1y7XRR6LHZIj6yLYnUi/mm2KXKBg==}
@@ -702,8 +712,8 @@ packages:
   create-require@1.1.1:
     resolution: {integrity: sha512-dcKFX3jn0MpIaXjisoRvexIJVEKzaq7z2rZKxf+MSr9TkdmHmsU4m2lcLojrj/FHl8mk5VxMmYA+ftRkP/3oKQ==}
 
-  cross-spawn@7.0.3:
-    resolution: {integrity: sha512-iRDPJKUPVEND7dHPO8rkbOnPpyDygcDFtWjpeWNCgy8WP2rXcxXL8TskReQl6OrB2G7+UJrags1q15Fudc7G6w==}
+  cross-spawn@7.0.6:
+    resolution: {integrity: sha512-uV2QOWP2nWzsy2aMp8aRibhi9dlzF5Hgh5SHaB9OiTGEyDTiJJyx0uy51QXdyWbtAHNua4XJzUKca3OzKUd3vA==}
     engines: {node: '>= 8'}
 
   dayjs@1.11.11:
@@ -2277,7 +2287,7 @@ snapshots:
 
   '@open-draft/until@1.0.3': {}
 
-  '@orderingstack/ordering-types@1.26.1': {}
+  '@orderingstack/ordering-types@1.27.1': {}
 
   '@sinclair/typebox@0.27.8': {}
 
@@ -2345,6 +2355,8 @@ snapshots:
     dependencies:
       '@types/node': 20.14.2
 
+  '@types/lodash@4.17.13': {}
+
   '@types/ms@0.7.34': {}
 
   '@types/node@20.14.2':
@@ -2401,7 +2413,7 @@ snapshots:
     dependencies:
       possible-typed-array-names: 1.0.0
 
-  axios@1.7.7:
+  axios@1.7.9:
     dependencies:
       follow-redirects: 1.15.6
       form-data: 4.0.0
@@ -2612,7 +2624,7 @@ snapshots:
 
   create-require@1.1.1: {}
 
-  cross-spawn@7.0.3:
+  cross-spawn@7.0.6:
     dependencies:
       path-key: 3.1.1
       shebang-command: 2.0.0
@@ -2678,7 +2690,7 @@ snapshots:
 
   execa@5.1.1:
     dependencies:
-      cross-spawn: 7.0.3
+      cross-spawn: 7.0.6
       get-stream: 6.0.1
       human-signals: 2.1.0
       is-stream: 2.0.1
