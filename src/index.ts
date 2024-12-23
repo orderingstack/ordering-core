@@ -43,6 +43,7 @@ export {
 } from './orderStore';
 export * as orderStore from './orderStore';
 export {
+  IAccessTokenData,
   authDataProvider,
   createAuthDataProvider,
   authorizeWithRefreshToken,

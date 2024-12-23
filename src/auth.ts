@@ -76,6 +76,17 @@ export async function authorizeWithUserPass(
   }
 }
 
+export interface IAccessTokenData {
+  MODULE?: string;
+  iss: string;
+  exp: number;
+  UUID: string;
+  TENANT: string;
+  jti: string;
+  authorities: string[];
+  scope?: string[];
+}
+
 /**
  * Gets module config only if given accessToken is for a module, otherwise returns undefined
  * @param baseUrl
@@ -83,15 +94,7 @@ export async function authorizeWithUserPass(
  */
 export async function getModuleConfig(baseUrl: string, accessToken: string) {
   try {
-    const tokenData = jwtDecode<{
-      MODULE?: string;
-      iss: string;
-      exp: number;
-      UUID: string;
-      TENANT: string;
-      jti: string;
-      authorities: string[];
-    }>(accessToken);
+    const tokenData = jwtDecode<IAccessTokenData>(accessToken);
     if (tokenData.MODULE) {
       const { data } = await axios.get<ModuleConfig>(
         `${baseUrl}/auth-api/api/module-config`,
