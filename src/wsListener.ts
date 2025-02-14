@@ -94,8 +94,6 @@ export async function connectWebSockets(
         return;
       }
       const accessToken = stompConfig.connectHeaders.login;
-      await params.onConnectedAsync(accessToken);
-      console.log('Websocket connected.');
       if (params.onKDSMessageAsync) {
         var subscription = client.subscribe(
           `/kds/${params.tenant}/${params.venue}`,
@@ -134,6 +132,9 @@ export async function connectWebSockets(
           },
         );
       }
+      console.log('Websocket connected.');
+      // notify connected only after all subscriptions are set up
+      await params.onConnectedAsync(accessToken);
     },
 
     onDisconnect: async function () {

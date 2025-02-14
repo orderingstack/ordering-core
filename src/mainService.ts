@@ -32,6 +32,7 @@ export function orderChangesListener(
     appInsights?: ApplicationInsights;
     debugWs?: boolean;
     onlyCompletedOrdersForUser?: boolean;
+    onWebsocketConnected?: (status: boolean) => void;
   },
 ): Promise<() => Promise<void>> {
   const { appInsights, debugWs, onlyCompletedOrdersForUser } = extra || {};
@@ -46,6 +47,7 @@ export function orderChangesListener(
         console.log('Websocket connected async');
         debugWs &&
           appInsights?.trackTrace({ message: 'websocket connected async' });
+        extra?.onWebsocketConnected?.(true);
         let orders;
         if (!enableKDS) {
           // pulls ONLY open orders
