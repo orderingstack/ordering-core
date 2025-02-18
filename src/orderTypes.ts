@@ -5,11 +5,13 @@ export {
   EOrderType,
   EOrderSource,
   EOrderPaymentType,
+  IModule,
 } from '@orderingstack/ordering-types';
 import {
   IOrder,
   EOrderLineStatus,
   EOrderPaymentType,
+  IModule,
 } from '@orderingstack/ordering-types';
 
 export interface IUser {
@@ -163,6 +165,7 @@ export interface IAuthDataProvider {
     ctx: any,
     getRefreshToken: IRefreshTokenStorageHandler,
     forceRefresh?: boolean,
+    moduleConfigCallback?: (moduleConfig: ModuleConfig) => void,
   ): Promise<{
     token: string;
     UUID: string;
@@ -183,3 +186,10 @@ export interface IOrderServerTool {
   ): Promise<{ id: string; correlationId: string }>;
   fetchOrder(ctx: any, id: string, tokenProvider: IAuthDataProvider): IOrder;
 }
+
+export type ModuleConfig = Pick<
+  IModule,
+  'id' | 'type' | 'venue' | 'production' | 'config'
+> & {
+  configSignature: string;
+};

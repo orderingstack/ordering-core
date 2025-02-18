@@ -1,6 +1,6 @@
 {
   "name": "@orderingstack/ordering-core",
-  "version": "1.7.1",
+  "version": "1.9.1",
   "description": "Ordering Stack client core library",
   "main": "./lib/cjs/index.js",
   "module": "./lib/esm/index.js",
@@ -8,7 +8,7 @@
   "files": [
     "lib/"
   ],
-  "packageManager": "pnpm@9.12.2",
+  "packageManager": "pnpm@9.15.0",
   "scripts": {
     "tsc": "tsc -p tsconfig.json && tsc -p tsconfig-cjs.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
@@ -21,18 +21,20 @@
   "license": "MIT",
   "dependencies": {
     "@stomp/stompjs": "6.1.2",
-    "axios": "^1.7.7",
+    "axios": "^1.7.9",
     "jwt-decode": "^4.0.0",
     "my-events": "npm:events@^3.3.0",
     "text-encoding": "^0.7.0",
-    "ws": "^7.5.10"
+    "ws": "^7.5.10",
+    "lodash": "^4.17.21"
   },
   "devDependencies": {
     "@microsoft/applicationinsights-web": "^3.1.0",
-    "@orderingstack/ordering-types": "^1.21.0",
-    "@types/my-events": "npm:@types/events",
+    "@orderingstack/ordering-types": "^1.27.1",
     "@types/jest": "^29.5.7",
     "@types/jsonwebtoken": "^9.0.6",
+    "@types/lodash": "^4.17.13",
+    "@types/my-events": "npm:@types/events",
     "@types/node": "^20.14.2",
     "dayjs": "^1.11.11",
     "jest": "^29.7.0",
@@ -44,10 +46,13 @@
     "ts-node": "^9.1.1",
     "typescript": "^5.4.3"
   },
-  "resolutions": {
-    "semver": "^7.6.2",
-    "@babel/traverse": "^7.23.2",
-    "micromatch": "^4.0.8",
-    "cookie": "^0.7.0"
+  "pnpm" :{
+    "overrides": {
+      "semver": "^7.6.2",
+      "@babel/traverse": "^7.23.2",
+      "micromatch": "^4.0.8",
+      "cookie": "^0.7.0",
+      "cross-spawn@>=7.0.0 <7.0.5": "^7.0.5"
+    }
   }
 }

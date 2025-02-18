@@ -94,8 +94,6 @@ export async function connectWebSockets(
         return;
       }
       const accessToken = stompConfig.connectHeaders.login;
-      await params.onConnectedAsync(accessToken);
-      console.log('Websocket connected.');
       if (params.onKDSMessageAsync) {
         var subscription = client.subscribe(
           `/kds/${params.tenant}/${params.venue}`,
@@ -112,6 +110,7 @@ export async function connectWebSockets(
             var message = JSON.parse(data.body) as INotificationMessage;
             await params.onOrdersUpdateAsync(message);
           },
+          params.venue ? { 'x-venue': params.venue } : undefined,
         );
       }
       if (params.onNotificationAsync) {
@@ -121,6 +120,7 @@ export async function connectWebSockets(
             var message = JSON.parse(data.body);
             await params.onNotificationAsync(message);
           },
+          params.venue ? { 'x-venue': params.venue } : undefined,
         );
       }
       if (params.onSteeringCommand && params.venue) {
@@ -132,6 +132,9 @@ export async function connectWebSockets(
           },
         );
       }
+      console.log('Websocket connected.');
+      // notify connected only after all subscriptions are set up
+      await params.onConnectedAsync(accessToken);
     },
 
     onDisconnect: async function () {
